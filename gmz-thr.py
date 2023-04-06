@@ -9,7 +9,6 @@ import pathlib
 import logging
 import ipaddress                         # import ipaddress module
 import schedule
-import animation   
 ##########################################################################################
 # This is a decorator function that will handle exceptions in netmiko module functions
 # and will print a message to the user and return None if an exception is raised in the
@@ -46,6 +45,14 @@ def netmiko_exception_handler(func):           # This is a decorator function ta
             return None
     return wrapper  # This will return the wrapper function
 
+def execute_time(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        print(f"the {func.__name__} took {end_time - start_time} seconds to run.")
+        return result
+    return wrapper
 
 ##########################################################################################
 logging.basicConfig(filename='test.log', level=logging.DEBUG) # This will create a log file and set the logging level to DEBUG 
@@ -116,7 +123,7 @@ def input_file_ip():              # function to get user input for IP file
                         'port': 22,
                         'secret': "cisco",          # enable password
                         'verbose': True                
-                     }
+                    }
                     hosts_list.append(cisco_device)          # append the dictionary cisco_device to the list hosts_list
                 return hosts_list           # return the list hosts_list
         except Exception as e:              # except block to handle exceptions
@@ -420,7 +427,6 @@ def mp_bgp():
 ##########################################################################################
 @netmiko_exception_handler
 def create_vlan():
-
     color.prYellow('********** Create VLANs **********')
     st=input('enter start vlan id :')
     end=input('enter end vlan id :')
@@ -578,14 +584,14 @@ def configure_device_backup(host ,newpath,hour,minute,second):
                 
                 prompt = connection.find_prompt()
                 if '>' in prompt:
-                 connection.enable()
+                    connection.enable()
                 color.color.prPurple(f'Entered enable mode on ' + {host['host']})
                 backup_config = connection.send_command('show run')
     
                 print(f'connected to device{host["host"]}')
                 file_name = f"{newpath}" + f'\\{host["host"]}__{hour}-{minute}-{second}.txt'     # create a new file in the new folder
                 with open(file_name, 'w') as f:         # w: write, r: read, a: append
-                     f.write(backup_config)         # write the output of the show run command to the file
+                    f.write(backup_config)         # write the output of the show run command to the file
                 print(f'Backup completed for device{host["host"]}')
                 send_to_telegram(f'Backup completed for device{host["host"]}')
                 connection.disconnect()
@@ -595,7 +601,7 @@ def configure_device_backup(host ,newpath,hour,minute,second):
         print("Backup failed")
         print('Error(', str(e) + ')  \nTry again')
 
-
+@execute_time
 @netmiko_exception_handler
 def backup_all():
     try:
@@ -632,13 +638,13 @@ def backup_all():
         threads = []
         print(threads)
         for host in device_list:
-          t = threading.Thread(target=configure_device_backup, args=(host,newpath,hour,minute,second ))
-          threads.append(t)
-          t.start()
+            t = threading.Thread(target=configure_device_backup, args=(host,newpath,hour,minute,second ))
+            threads.append(t)
+            t.start()
         print(threads)
         for t in threads:
             
-           t.join()
+            t.join()
     except Exception as e:
         print('Error(', str(e) + ')  \nTry again')
 
@@ -847,7 +853,7 @@ def logo():     # this function will print the logo of the tool
 Electrical  Engineering 
           &
  Computers  Department
-  Gruaduation Project
+  Graduation Project
 ''' + reset+purple+'''
          A-M-Z 
 Network Management Tool '''+reset + '\n' # this is the logo of the tool
@@ -941,7 +947,6 @@ def type_out(string):
     for char in string:
         print(char, end="", flush=True  )
         time.sleep(0.00000000000000000001)
-
 def welcome():
     type_out(yellow+"      Welcome!        to our        AMZ TOOL\n" + reset)
     type_out("      --------------------------------------\n" )
@@ -950,10 +955,27 @@ def welcome():
     type_out(logo())
     type_out(OPTIONS+blue+'[+] You choose: ' + reset)
     time.sleep(.1)
-    
 
 
-welcome()
+
+welcome()    
+
+def suppress_stdout():
+    with open(os.devnull, "w") as devnull:
+        old_stdout = sys.stdout
+        sys.stdout = devnull
+        try:  
+            yield
+        finally:
+            sys.stdout = old_stdout
+
+
+def contextmanager(func):
+    def inner(*args, **kwargs):
+        with suppress_stdout():
+            return func(*args, **kwargs)
+    return inner
+
 if __name__ == "__main__":          # if the program is running directly
     main()
 
