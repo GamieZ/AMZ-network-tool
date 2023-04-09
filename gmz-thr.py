@@ -946,7 +946,7 @@ def main():
 def type_out(string):
     for char in string:
         print(char, end="", flush=True  )
-        time.sleep(0.00000000000000000001)
+        time.sleep(0.007)
 def welcome():
     type_out(yellow+"      Welcome!        to our        AMZ TOOL\n" + reset)
     type_out("      --------------------------------------\n" )
