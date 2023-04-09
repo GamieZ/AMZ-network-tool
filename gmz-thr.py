@@ -960,21 +960,6 @@ def welcome():
 
 welcome()    
 
-def suppress_stdout():
-    with open(os.devnull, "w") as devnull:
-        old_stdout = sys.stdout
-        sys.stdout = devnull
-        try:  
-            yield
-        finally:
-            sys.stdout = old_stdout
-
-
-def contextmanager(func):
-    def inner(*args, **kwargs):
-        with suppress_stdout():
-            return func(*args, **kwargs)
-    return inner
 
 if __name__ == "__main__":          # if the program is running directly
     main()
