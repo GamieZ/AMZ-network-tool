@@ -77,7 +77,7 @@ def input_file_ip():
 
 
 
-def arp_table():
+def trubleshooting():
     x = 0
     while x < 3:
         try:
