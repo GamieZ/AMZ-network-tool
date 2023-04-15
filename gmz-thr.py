@@ -1,14 +1,8 @@
 import threading
 from netmiko import ConnectHandler , NetmikoTimeoutException, NetmikoAuthenticationException ,NetmikoBaseException
 from datetime import datetime
-import time 
-import requests
-import os
-import sys
-import pathlib
-import logging
-import ipaddress                         # import ipaddress module
-import schedule
+import  time , os , sys , pathlib , logging , ipaddress , schedule , json , threading , requests
+from napalm import get_network_driver
 ##########################################################################################
 # This is a decorator function that will handle exceptions in netmiko module functions
 # and will print a message to the user and return None if an exception is raised in the
@@ -886,7 +880,22 @@ def menu():
             continue
 
 # options menu 
-OPTIONS = '''
+main_options = '''
+            [?] What do you want to do?
+            --------------------------------
+            [1] Configure devices
+            [2] Monitor devices
+            [3] Backup devices
+            [4] Exit
+            --------------------------------
+            '''
+main_dict = {
+    "1" : lambda:None,
+    "2" : lambda:None,
+    "3" : schedule_backup,
+    "4" : lambda: sys.exit()
+}   
+conf_option = '''
             [?] What do you want to perform?
             --------------------------------
             [1] Multi device same config
@@ -896,14 +905,13 @@ OPTIONS = '''
             [5] Create VLAN
             [6] Interface VLAN
             [7] DHCP
-            [8] Backup all
-            [9] Monitor interfaces
-            [10] Exit
+            [8] Monitor interfaces
+            [9] Back to main menu
             --------------------------------
             '''
 
 # options menu commands and functions 
-cmds = {
+conf_dic = {
 	"1" : multi_device_same_config,
 	"2" : multi_device_unique_config,
     "3" : bgp,
@@ -911,37 +919,74 @@ cmds = {
     "5" : create_vlan,
     "6" : int_vlan,
     "7" : dhcp ,
-    "8" : schedule_backup,
-    "9" : monitor_interfaces_th,
-	"10" : lambda: sys.exit()
+    "8" : monitor_interfaces_th,
+    "9" : lambda : None,
 }
 
 
 
 def main():
-	while True:
-		os.system('cls' if os.name == 'nt' else 'clear')   # clear the screen 
-		color.pr(logo())    # print the logo of the tool
+    while True:
+        os.system('cls' if os.name == 'nt' else 'clear')   # clear the screen 
+        color.pr(logo())    # print the logo of the tool
 
-		try:   # try to get the choice from the user
-			choice = input("\n%s" % OPTIONS + blue+'[+] You choose: ' + reset)                 # get the choice from the user
-			if choice not in cmds:                       # if the user enter a wrong choice
-				print ('[!]'+ red+'Invalid Choice' + reset)             # print a message
-				input(yellow+'[!] Press Enter to start over'+reset)
-				continue                    # continue the loop
+        try:   # try to get the choice from the user
+            choice = input("\n%s" % main_options + blue+'[+] You choose: ' + reset)                 # get the choice from the user
+            if choice not in main_dict:                       # if the user enter a wrong choice
+                print ('[!]'+ red+'Invalid Choice' + reset)             # print a message
+                input(yellow+'[!] Press Enter to start over'+reset)
+                continue                    # continue the loop
             # if the user enter a valid choice
-			cmds.get(choice)()          # call the function of the choice
-		except KeyboardInterrupt:            # if the user press ctrl + c
-			print (red+'[!] Ctrl + C detected\n[!] Exiting'+ reset)        # print a message
-			sys.exit(0)             # exit the program
-		except EOFError:            # if the user press ctrl + d
-			print (red+'[!] Ctrl + D detected\n[!] Exiting' +reset )            # print a message
-			sys.exit(0)
-		except:
-			print ('[!]'+ red+'Invalid Choice' + reset)             # print a message
-			input(red+'[!] Press Enter to start over'+reset)
-			continue
-    
+            if choice == '1':           # if user selects submenu
+                while True:             # submenu loop
+                    os.system('cls' if os.name == 'nt' else 'clear')
+                    color.pr(logo())    # print the logo of the tool
+                    try:
+                        conf_choice = input("\n%s" % conf_option + blue + '[+] You choose: ' + reset)
+                        if conf_choice == '9':  # exit submenu and go back to main menu
+                            break
+                        conf_dic.get(conf_choice)()  # call function based on sub_choice
+                    except KeyboardInterrupt:
+                        print(red + '[!] Ctrl + C detected\n[!] Exiting' + reset)
+                        sys.exit(0)
+                    except EOFError:
+                        print(red + '[!] Ctrl + D detected\n[!] Exiting' + reset)
+                        sys.exit(0)
+                    except:
+                        print('[!]' + red + 'Invalid Choice' + reset)
+                        input(red + '[!] Press Enter to start over' + reset)
+                        continue
+            elif choice == '2':  # if user selects submenu
+                while True:  # submenu loop
+                    os.system('cls' if os.name == 'nt' else 'clear')
+                    color.pr(logo())  # print the logo of the tool
+                    try:
+                        conf_choice = input("\n%s" % conf_option + blue + '[+] You choose: ' + reset)
+                        if conf_choice == '9':  # exit submenu and go back to main menu
+                            break
+                        conf_dic.get(conf_choice)()  # call function based on sub_choice
+                    except KeyboardInterrupt:
+                        print(red + '[!] Ctrl + C detected\n[!] Exiting' + reset)
+                        sys.exit(0)
+                    except EOFError:
+                        print(red + '[!] Ctrl + D detected\n[!] Exiting' + reset)
+                        sys.exit(0)
+                    except:
+                        print('[!]' + red + 'Invalid Choice' + reset)
+                        input(red + '[!] Press Enter to start over' + reset)
+                        continue
+            main_dict.get(choice)()          # call the function of the choice
+        except KeyboardInterrupt:            # if the user press ctrl + c
+            print (red+'[!] Ctrl + C detected\n[!] Exiting'+ reset)        # print a message
+            sys.exit(0)             # exit the program
+        except EOFError:            # if the user press ctrl + d
+            print (red+'[!] Ctrl + D detected\n[!] Exiting' +reset )            # print a message
+            sys.exit(0)
+        except:
+            print ('[!]'+ red+'Invalid Choice' + reset)             # print a message
+            input(red+'[!] Press Enter to start over'+reset)
+            continue
+
 
 def type_out(string):
     for char in string:
@@ -953,8 +998,8 @@ def welcome():
     type_out(yellow+"This tool is designed to help you to manage your network devices\n" + reset)
     type_out("----------------------------------------------------------------\n" )
     type_out(logo())
-    type_out(OPTIONS+blue+'[+] You choose: ' + reset)
-    time.sleep(.1)
+    type_out(main_options+blue+'[+] You choose: ' + reset)
+    time.sleep(.01)
 
 
 
