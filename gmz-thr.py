@@ -322,7 +322,7 @@ def multi_device_unique_config():
 
     threads = []
     for host in hosts_list:
-        t = threading.Thread(target=configure_device_unique, args=(host))
+        t = threading.Thread(target=configure_device_unique, args=(host,))
         threads.append(t)
         t.start()
 
@@ -825,7 +825,7 @@ class color:       # this class will print the text in different colors
     def prLightGray(skk): print("\033[97m {}\033[00m" .format(skk))      # this function will print the text in light gray color
     def pr(skk): print('{}'.format(skk))
 
-
+green="\033[1;32m"  # this variable will print the text in green color
 red = "\033[1;31m"    # this variable will print the text in red color
 yellow = "\033[1;33m"   # this variable will print the text in yellow color
 purple = "\033[1;35m"  # this variable will print the text in purple color 
@@ -848,11 +848,11 @@ Electrical  Engineering
           &
  Computers  Department
   Graduation Project
-''' + reset+purple+'''
+''' + reset+green+'''
          A-M-Z 
 Network Management Tool '''+reset + '\n' # this is the logo of the tool
    
-    terminal_width = os.get_terminal_size().columns # Get the width of the terminal window to center the logo 
+    terminal_width = os.get_terminal_size().columns - 10 # Get the width of the terminal window to center the logo 
 
     # Calculate the number of spaces needed to center the logo
     num_spaces = (terminal_width - len(hti.split("\n")[0])) // 2
@@ -882,12 +882,12 @@ def menu():
 # options menu 
 main_options = '''
             [?] What do you want to do?
-            --------------------------------
+            \033[1;31m--------------------------------\033[0m
             [1] Configure devices
             [2] Monitor devices
             [3] Backup devices
             [4] Exit
-            --------------------------------
+            \033[1;31m--------------------------------\033[0m
             '''
 main_dict = {
     "1" : lambda:None,
@@ -897,7 +897,7 @@ main_dict = {
 }   
 conf_option = '''
             [?] What do you want to perform?
-            --------------------------------
+            \033[1;31m--------------------------------\033[0m
             [1] Multi device same config
             [2] Multi device unique config
             [3] BGP
@@ -906,8 +906,8 @@ conf_option = '''
             [6] Interface VLAN
             [7] DHCP
             [8] Monitor interfaces
-            [9] Back to main menu
-            --------------------------------
+            [9] \033[1;33mBack to main menu\033[0m
+            \033[1;31m--------------------------------\033[0m
             '''
 
 # options menu commands and functions 
@@ -1003,7 +1003,6 @@ def welcome():
 
 
 
-welcome()    
 
 
 if __name__ == "__main__":          # if the program is running directly
