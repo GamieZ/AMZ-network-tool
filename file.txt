@@ -1,0 +1,4 @@
+int range e0/0-1
+sw trunk encapsulation dot1q
+sw mode trunk
+exit

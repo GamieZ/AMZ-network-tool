@@ -1,0 +1,8 @@
+int range e0/2-3
+sw mode access
+sw access vlan 30
+Exit
+int range e1/0-1
+sw mode access
+sw access vlan 40
+Exit

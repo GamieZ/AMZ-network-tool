@@ -1,7 +1,7 @@
 import threading
 from netmiko import ConnectHandler , NetmikoTimeoutException, NetmikoAuthenticationException ,NetmikoBaseException
 from datetime import datetime
-import  time , os , sys , pathlib , logging , ipaddress , schedule , json , threading , requests
+import  time , os , sys , pathlib , logging , ipaddress  , json , threading , requests ,schedule
 from napalm import get_network_driver
 ##########################################################################################
 # This is a decorator function that will handle exceptions in netmiko module functions
@@ -15,30 +15,39 @@ from napalm import get_network_driver
 # 5. configure_device_unique()
 # 6. backup_device()
 # and any other function that uses netmiko module functions
-##########################################################################################
-def netmiko_exception_handler(func):           # This is a decorator function takes a function as an argument
-    
-    def wrapper(*args, **kwargs):          # This is a wrapper function that will handle exceptions in netmiko module functions
-        try:
-            return func(*args, **kwargs)  # This will execute the function that is decorated by this decorator function
-        except NetmikoTimeoutException as e:           # This will handle timeout errors
-            print('Error(', str(e) + ')  \nTry again')  # and will print a message to the user and return None if an exception is raised in the
-            menu()
-            return None
-        except NetmikoAuthenticationException as e:  # this will handle authentication errors
-            print('Error(', str(e) + ')  \nTry again')
-            menu()
-            return None                      # and will print a message to the user and return None if an exception is raised 
-        except NetmikoBaseException as e:         # this will handle other errors during connection establishment
-            print('Error(', str(e) + ')  \nTry again')
-            menu()
-            return None    
-        except Exception as e:             # this will handle other errors like :error message, retry the connection, or terminate the program.
-            print('Error(', str(e) + ')  \nTry again')
-            menu()
-            return None
-    return wrapper  # This will return the wrapper function
 
+##########################################################################################
+
+
+
+def run_function_and_wait(func):
+
+    def netmiko_exception_handler(*args, **kwargs):           # This is a decorator function takes a function as an argument
+    
+        def wrapper(*args, **kwargs):          # This is a wrapper function that will handle exceptions in netmiko module functions
+            try:
+                return func(*args, **kwargs)  # This will execute the function that is decorated by this decorator function
+            except NetmikoTimeoutException as e:           # This will handle timeout errors
+                print('Error(', str(e) + ')  \nTry again')  # and will print a message to the user and return None if an exception is raised in the
+                menu()
+                return None
+            except NetmikoAuthenticationException as e:  # this will handle authentication errors
+                print('Error(', str(e) + ')  \nTry again')
+                menu()
+                return None                      # and will print a message to the user and return None if an exception is raised 
+            except NetmikoBaseException as e:         # this will handle other errors during connection establishment
+                print('Error(', str(e) + ')  \nTry again')
+                menu()
+                return None    
+            except Exception as e:             # this will handle other errors like :error message, retry the connection, or terminate the program.
+                print('Error(', str(e) + ')  \nTry again')
+                menu()
+                return None
+        
+        wrapper_result = wrapper(*args, **kwargs)
+        input("\033[1;33mPress Enter to return to the menu.\033[0m")        
+        return wrapper_result
+    return netmiko_exception_handler  # This will return the decorator function
 def execute_time(func):
     def wrapper(*args, **kwargs):
         start_time = time.time()
@@ -59,7 +68,7 @@ logger = logging.getLogger("ipaddress") # used only for debugging purposes to pr
 # 3. Create a function that will take user input for configuration file
 # 4. Create a function that will validate IP address
 ##########################################################################################
-@netmiko_exception_handler      # This will decorate the input_user_ip() function
+# @netmiko_exception_handler      # This will decorate the input_user_ip() function
 def input_user_ip():        # function to get user input for IP addresses separated by comma
     color.prYellow('**** USER input IP addresses separated by comma ****')       # print a message to the user
     x=0                     # initialize x to 0 to be used in the while loop to count the number of attempts 
@@ -96,7 +105,7 @@ def input_user_ip():        # function to get user input for IP addresses separa
 
 
 #
-@netmiko_exception_handler     # This will decorate the input_file_ip() function
+#@netmiko_exception_handler     # This will decorate the input_file_ip() function
 def input_file_ip():              # function to get user input for IP file
     color.prYellow('**** USER input file name with IP addresses ****')  # print a message to the user
     color.prRed('ATTENTION: !!!')       # print a message to the user to inform him that he has only 3 attempts
@@ -130,7 +139,6 @@ def input_file_ip():              # function to get user input for IP file
                 return None             # return None
             
 
-@netmiko_exception_handler   # This will decorate the config_file() function 
 def config_file():           # function to get user input for configuration file
     color.prYellow('**** USER input file name with configuration ****')     # print a message to the user
     color.prRed('ATTENTION: !!!')
@@ -168,27 +176,30 @@ def validate_ip_address(address):
 ##########################################################################################
 # 1. Create a function that configures multiple devices with same configuration file
 ##########################################################################################
-@netmiko_exception_handler
+@run_function_and_wait
 def configure_device_same(host, configfile):
-    color.prLightPurple(f'**** Configure device {host["host"]} with same configuration file ****')
+    color.prLightPurple(f'**** Configure device {host["ip"]} with same configuration file ****')
     try:
         connection = ConnectHandler(**host)
-        color.prGreen(f'Connected to {host["host"]}')
+        color.prGreen(f'Connected to {host["ip"]}')
         prompt = connection.find_prompt()
         print(prompt)
         if '>' in prompt:
             connection.enable()
-            color.prPurple(f'Entered enable mode on ' + {host['host']}) 
-
+            print('Enable mode enabled')
+        
         output = connection.send_config_from_file(configfile)
         print(output)
-        color.prGreen(f'Configuration file {configfile} loaded successfully on {host["host"]}')
+        color.prGreen(f'Configuration file {configfile} loaded successfully on {host["ip"]}')
+        with open('output.txt', 'a') as f:
+            f.write(output)
+        
         connection.disconnect()
     except Exception as e:
         print('Error(', str(e) + ')  \nTry again')
 
 
-@netmiko_exception_handler
+@run_function_and_wait
 def multi_device_same_config():
     color.prYellow('**** Configure multiple devices with same configuration file ****')
     color.prRed('ATTENTION: !!!')
@@ -230,12 +241,8 @@ def multi_device_same_config():
         color.prRed('Failed to load hosts')
         color.prRed('No hosts to configure')
         return None
-    
-    
-    
+
     configfile = config_file()
-
-
 
     if configfile == None:
         color.prRed('Failed to load config file')
@@ -259,12 +266,8 @@ def multi_device_same_config():
 # 1. Create a function that configures multiple devices with a unique configuration file
 #        for each device
 ##########################################################################################
-
-@netmiko_exception_handler
+@run_function_and_wait
 def configure_device_unique(host):
-    print(f"Configuring device: " + {host["host"]})
-    
-    configfile=config_file()
     try:
 
         connection = ConnectHandler(**host)
@@ -272,16 +275,18 @@ def configure_device_unique(host):
         print(prompt)
         if '>' in prompt:
             connection.enable()
-            color.prPurple(f'Entered enable mode on ' + {host['host']})
-
+            print('Enable mode enabled')
+        color.prYellow(f'**** Configure device {host["ip"]} with unique configuration file ****')
+        configfile=config_file()
         output = connection.send_config_from_file(configfile)
         print(output)
+        color.prGreen(f'Configuration file {configfile} loaded successfully on {host["ip"]}')
         connection.disconnect()
     except Exception as e:
         print('Error(', str(e) + ')  \nTry again')
 
 
-
+@run_function_and_wait
 def multi_device_unique_config():
     """
     Prompt user for a list of device IPs, connect to each device,
@@ -339,10 +344,9 @@ def multi_device_unique_config():
 '* fix it *' 
 ''' multi mpgb threads'''
 ##########################################################################################
-@netmiko_exception_handler
 def bgp():
     
-    ip=validate_ip_address(input('enter ip address :'))
+    ip=validate_ip_address(input('enter router ip to connect :'))
 
     st=input('enter start vlan id :')
     end=input('enter end vlan id :')
@@ -352,7 +356,7 @@ def bgp():
     
     cisco_device = {                  # Create the device object    
             "device_type": "cisco_ios",
-            "host":ip,
+            "ip":ip,
             "username": "u1",
             "password": "cisco",
             "secret": "cisco",
@@ -364,26 +368,27 @@ def bgp():
     print(promt)  
     if '>' in promt:    #if prompt is > enter enable mode
             connection.enable()        #enter enable mode
-            color.prPurple(f'Entered enable mode on ' + {ip})    
+            print('Enable mode enabled')
+        
     connection.send_command_timing('conf t') #enter config terminal
-    connection.send_command(f'router bgp 1')
-    connection.send_command(f'neighbor {neighbor} remote-as {neighbor_as}')
-    connection.send_command(f'no auto-summary')
+    connection.send_command_timing('router bgp 1 ') #enter bgp
+    connection.send_command_timing(f'neighbor {neighbor} remote-as {neighbor_as}')
+    connection.send_command_timing(f'no auto-summary')
     for vlan in range(int(st),int(end),int(i)):
-        connection.send_command(f'net 192.168.{vlan}.0 mask 255.255.255.0')
+        connection._send_command_timing_str(f'net 192.168.{vlan}.0 mask 255.255.255.0')
+        print("done")
 
     connection.disconnect()
-
-@netmiko_exception_handler
+@run_function_and_wait
 def mp_bgp():
     
-    ip=validate_ip_address(input('enter router IP :'))
-    ebgp_neighbour = input('enter ebgp neighbour ip ,')
-    ibgp_neighbour = input('enter ibgp neighbour ip ,')
+    ip=validate_ip_address(input('enter router IP to connect :'))
+    ebgp_neighbour = input('enter ebgp neighbour ip :')
+    ibgp_neighbour = input('enter ibgp neighbours ip seprated by , :')
     ibgp_neighbours=ibgp_neighbour.split(',') 
     cisco_device = {                  # Create the device object
             "device_type": "cisco_ios",
-            "host":ip,
+            "ip":ip,
             "username": "u1",
             "password": "cisco",
             "secret": "cisco",
@@ -394,18 +399,21 @@ def mp_bgp():
     
     connection.enable()        #enter enable mode
     connection.send_command_timing('conf t') #enter config terminal
-    connection.send_command(f'router bgp 300')
+    connection.send_command_timing(f'router bgp 300 ')
     for ibgp in ibgp_neighbours:
-        connection.send_command(f'neighbor {ibgp} remote-as 300')
-        connection.send_command(f'neighbor {ibgp} update-source lo0')
-        connection.send_command('address-family vpnv4')
-        connection.send_command(f'neighbor {ibgp} activate')
-        connection.send_command(f'neighnor {ibgp} send-community both')
-        connection.send_command('exit-address-family')
-    connection.send_command('address-family ipv4 vrf net')
-    connection.send_command(f'neighbor {ebgp_neighbour} remote-as 1')
-    connection.send_command(f'neighbor {ebgp_neighbour} activate')
-    connection.send_command(f'neighbor {ebgp_neighbour} as override')
+        print(ibgp)
+        connection.send_command_timing(f'neighbor {ibgp} remote-as 300 ')
+        connection.send_command_timing(f'neighbor {ibgp} update-source lo0 ')
+        connection.send_command_timing('address-family vpnv4 ')
+        connection.send_command_timing(f'neighbor {ibgp} activate ')
+        connection.send_command_timing(f'neighnor {ibgp} send-community both ')
+        connection.send_command_timing('exit-address-family ')
+        print("done")
+    connection.send_command_timing('address-family ipv4 vrf net ')
+    connection.send_command_timing(f'neighbor {ebgp_neighbour} remote-as 1 ')
+    connection.send_command_timing(f'neighbor {ebgp_neighbour} activate ')
+    connection.send_command_timing(f'neighbor {ebgp_neighbour} as override ')
+    print("All done")
     connection.disconnect()
 
 
@@ -419,12 +427,29 @@ def mp_bgp():
 #######******** un complete * add multi threading * Error handling *********##############
 '* fix it *'
 ##########################################################################################
-@netmiko_exception_handler
-def create_vlan():
+
+def create_vlan(host,st,end,i):
     color.prYellow('********** Create VLANs **********')
-    st=input('enter start vlan id :')
-    end=input('enter end vlan id :')
-    i = input('enter increment for vlan :')
+
+    connection=ConnectHandler(**host)
+    promt =connection.find_prompt()
+    print(promt)
+    if '>' in promt:
+        connection.enable()
+        time.sleep(5)
+        print('enter enable mode')
+        connection.send_command_timing ("conf t")
+        promt = connection.find_prompt()
+        print(promt)
+    for vlan in range(int(st),int(end),int(i)):
+        send="vlan "+str(vlan)
+        print(f'{send} + {host["ip"]}') 
+        output=connection.send_command_timing(send)
+        print(output)
+    time.sleep(5)
+    connection.disconnect()
+
+def vlan_create():
     x = 0
     while x < 3:
         try:
@@ -439,7 +464,8 @@ def create_vlan():
                     return None
             else:
                 print('Error: Invalid input')
-                print ('please Try again')
+                print('please Try again')
+                print  # print a blank line to
                 continue
             break
 
@@ -451,10 +477,39 @@ def create_vlan():
                 print('You have exceeded the number of attempts')
                 return None
 
-    if hosts_list == None:  
+    if hosts_list == None:
         print('No hosts to configure')
         return None
+    st = input('enter start vlan id :')
+    end = input('enter end vlan id :')
+    i = input('enter increment for vlan :')
+
+    threads = []
+    for host in hosts_list:
+        t = threading.Thread(target=create_vlan, args=(host,st,end,i))
+        threads.append(t)
+        t.start()
+
+    for t in threads:
+        t.join()
     
+    
+    for host in hosts_list :
+        connection=ConnectHandler(**host)
+        promt =connection.find_prompt()
+        print(promt)
+        if '>' in promt:
+            connection.enable()
+            print('enter enable mode')
+        connection.send_command_timing('conf t')
+        for vlan in range(int(st),int(end),int(i)):
+            print(vlan)
+            send="vlan "+str(vlan)
+            print(send)
+            output=connection.send_command_timing(send)
+            print(output)
+        connection.disconnect()
+
     for host in hosts_list :
         connection=ConnectHandler(**host)
         promt =connection.find_prompt()
@@ -474,7 +529,7 @@ def create_vlan():
 
 
 #def int_vlan(ip):  
-@netmiko_exception_handler
+
 def int_vlan():
     color.prYellow('********** configure interface vlan **********')
     ip=validate_ip_address(input('enter ip address :'))
@@ -496,13 +551,13 @@ def int_vlan():
     print(promt)  
     if '>' in promt:    #if prompt is > enter enable mode
             connection.enable()        #enter enable mode
-            print('enter enable mode')    
+            print('entering enable mode...')    
     connection.send_command_timing('conf t')         #enter config terminal
     connection.send_command_timing(f'ip route 0.0.0.0 255.255.255.255 '+getway) #add default route
     ask=input('enter active or standby:') #ask for active or standby
     for vlan in range(int(st),int(end),int(i)): #loop for vlan id 
             print(vlan) 
-            
+            vlan=str(vlan)
             if ask=='active' or ask=='Active'or ask=='A' or ask=='a': 
                 
                 connection.send_command_timing(f'sppaning tree vlan {vlan} root primary')
@@ -512,6 +567,7 @@ def int_vlan():
                 connection.send_command_timing(f'standby {vlan} priorty 150')
                 connection.send_command_timing(f'standby {vlan} ip 192.168.{vlan}.3')
                 connection.send_command_timing('no shut')
+                print(vlan + ' is done')
                 
             elif ask=='standby' or ask=='Standby'or ask=='S' or ask=='s':
                 
@@ -531,17 +587,17 @@ def int_vlan():
 
 
 #define function for dhcp  pool 
-@netmiko_exception_handler
+
 def dhcp():
     color.prYellow('''********** DHCP **********''')
-    ip=validate_ip_address(input('enter router IP :'))
+    ip=validate_ip_address(input('enter router IP to connect :'))
 
     st=input('enter start vlan id :')
     end=input('enter end vlan id :')
     i = input('enter increment for vlan :')
     cisco_device = {                  # Create the device object
             "device_type": "cisco_ios",
-            "host":ip,
+            "ip":ip,
             "username": "u1",
             "password": "cisco",
             "secret": "cisco",
@@ -554,13 +610,15 @@ def dhcp():
     if '>' in promt:
             connection.enable()
             print('enter enable mode')
-    connection.send_command('conf t')
+    connection.send_command_timing('conf t')
     for vlan in range(int(st),int(end),int(i)):   #loop for vlan id 
             print(vlan)
-            connection.send_command(f'ip dhcp excluded-address 192.168.{vlan}.1 192.168.{vlan}.10')
-            connection.send_command(f'ip dhcp pool data{vlan}')
-            connection.send_command(f'network 192.168.{vlan}.0')
-            connection.send_command(f'default-router 192.168.{vlan}.3')
+            vlan=str(vlan)
+            connection.send_command_timing(f'ip dhcp excluded-address 192.168.{vlan}.1 192.168.{vlan}.10')
+            connection.send_command_timing(f'ip dhcp pool data{vlan}')
+            connection.send_command_timing(f'network 192.168.{vlan}.0')
+            connection.send_command_timing(f'default-router 192.168.{vlan}.3')
+            print(vlan + ' is done')
     
     connection.disconnect()
 
@@ -570,33 +628,32 @@ def dhcp():
 #    to a folder on the local machine with the name of the device and the date and time
 #     of the backup at same time
 ##########################################################################################
-@netmiko_exception_handler
+
 def configure_device_backup(host ,newpath,hour,minute,second):
     try:
                 connection = ConnectHandler(**host)
-                print(f'connecting to device{host["host"]}')
+                print(f"connecting to device {host['ip']}")
                 
                 prompt = connection.find_prompt()
                 if '>' in prompt:
                     connection.enable()
-                color.color.prPurple(f'Entered enable mode on ' + {host['host']})
+                color.prPurple(f"Entered enable mode on {host['ip']}")
                 backup_config = connection.send_command('show run')
     
-                print(f'connected to device{host["host"]}')
-                file_name = f"{newpath}" + f'\\{host["host"]}__{hour}-{minute}-{second}.txt'     # create a new file in the new folder
+                print(f"connected to device{host['ip']}")
+                file_name = f"{newpath}" + f"\\{host['ip']}__{hour}-{minute}-{second}.txt"     # create a new file in the new folder
                 with open(file_name, 'w') as f:         # w: write, r: read, a: append
                     f.write(backup_config)         # write the output of the show run command to the file
-                print(f'Backup completed for device{host["host"]}')
-                send_to_telegram(f'Backup completed for device{host["host"]}')
+                print(f"Backup completed for device{host['ip']}")
+                send_to_telegram(f"Backup completed for device{host['ip']}")
                 connection.disconnect()
             
     except Exception as e:
-        print(f'Connection failed to device{host["host"]}')
+        print(f"Connection failed to device{host['ip']}")
         print("Backup failed")
         print('Error(', str(e) + ')  \nTry again')
 
-@execute_time
-@netmiko_exception_handler
+
 def backup_all():
     try:
         with open('devices.txt') as f:          # reading the devices ip address from a file into a list (each ip on its own line)
@@ -606,7 +663,7 @@ def backup_all():
         for ip in devices:                  # iterating over the list with the devices ip addresses
             cisco_device = {                     # Create the device object
                 'device_type': 'cisco_ios',     
-                'host': ip,
+                'ip': ip,
                 'username': 'u1',
                 'password': 'cisco',
                 'port': 22,
@@ -641,7 +698,7 @@ def backup_all():
             t.join()
     except Exception as e:
         print('Error(', str(e) + ')  \nTry again')
-
+@run_function_and_wait
 def schedule_backup():
     ask = input('Do you want to schedule daily backup? (y/n): ')
     if ask == 'y':
@@ -669,7 +726,7 @@ def schedule_backup():
 '* fix it *'
 
 ##########################################################################################
-@netmiko_exception_handler
+
 def monitor_interfaces(host):   
     
     connection = ConnectHandler(**host)
@@ -728,7 +785,7 @@ def monitor_interfaces(host):
                     #       print(f"Interface {intf} on {device['hostname']} has {in_errors} input errors.")
 
 ##########################
-@netmiko_exception_handler
+
 def monitor_interfaces_th():   
         color.prYellow('**** Configure multiple devices with same configuration file ****')
         color.prRed('ATTENTION: !!!')
@@ -799,7 +856,6 @@ def monitor_interfaces_th():
 extra  usefull functions
 
 """
-@netmiko_exception_handler # this is a decorator to handle exceptions in netmiko functions 
 def send_to_telegram(message):      # this function will send a message to telegram and take the message as a parameter 
 
     apiToken = '5803750722:AAGLa0rDUryF3lfsHWI1ycONlkpbR32V0dQ'     # get the token from @BotFather 
@@ -916,7 +972,7 @@ conf_dic = {
 	"2" : multi_device_unique_config,
     "3" : bgp,
     "4" : mp_bgp,
-    "5" : create_vlan,
+    "5" : vlan_create,
     "6" : int_vlan,
     "7" : dhcp ,
     "8" : monitor_interfaces_th,

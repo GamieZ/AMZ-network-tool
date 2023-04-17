@@ -1,0 +1,8 @@
+configure terminal
+Enter configuration commands, one per line.  End with CNTL/Z.
+sw2alex(config)#int range e0/0-1
+sw2alex(config-if-range)#sw trunk encapsulation dot1q
+sw2alex(config-if-range)#sw mode trunk
+sw2alex(config-if-range)#exit
+sw2alex(config)#end
+sw2alex#
