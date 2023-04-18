@@ -5,4 +5,119 @@ sw2alex(config-if-range)#sw trunk encapsulation dot1q
 sw2alex(config-if-range)#sw mode trunk
 sw2alex(config-if-range)#exit
 sw2alex(config)#end
-sw2alex#
+sw2alex#configure terminal
+Enter configuration commands, one per line.  End with CNTL/Z.
+3swalex(config)#22.1.1.1
+                ^
+% Invalid input detected at '^' marker.
+
+3swalex(config)#22.1.1.2
+                ^
+% Invalid input detected at '^' marker.
+
+3swalex(config)#22.1.1.3
+                ^
+% Invalid input detected at '^' marker.
+
+3swalex(config)#22.1.1.4
+                ^
+% Invalid input detected at '^' marker.
+
+3swalex(config)#22.1.1.5
+                ^
+% Invalid input detected at '^' marker.
+
+3swalex(config)#end
+3swalex#configure terminal
+Enter configuration commands, one per line.  End with CNTL/Z.
+sw2alex(config)#22.1.1.1
+                ^
+% Invalid input detected at '^' marker.
+
+sw2alex(config)#22.1.1.2
+                ^
+% Invalid input detected at '^' marker.
+
+sw2alex(config)#22.1.1.3
+                ^
+% Invalid input detected at '^' marker.
+
+sw2alex(config)#22.1.1.4
+                ^
+% Invalid input detected at '^' marker.
+
+sw2alex(config)#22.1.1.5
+                ^
+% Invalid input detected at '^' marker.
+
+sw2alex(config)#end
+sw2alex#configure terminal
+Enter configuration commands, one per line.  End with CNTL/Z.
+3swalex2(config)#22.1.1.1
+                 ^
+% Invalid input detected at '^' marker.
+
+3swalex2(config)#22.1.1.2
+                 ^
+% Invalid input detected at '^' marker.
+
+3swalex2(config)#22.1.1.3
+                 ^
+% Invalid input detected at '^' marker.
+
+3swalex2(config)#22.1.1.4
+                 ^
+% Invalid input detected at '^' marker.
+
+3swalex2(config)#22.1.1.5
+                 ^
+% Invalid input detected at '^' marker.
+
+3swalex2(config)#end
+3swalex2#configure terminal
+Enter configuration commands, one per line.  End with CNTL/Z.
+alex(config)#22.1.1.1
+             ^
+% Invalid input detected at '^' marker.
+
+alex(config)#22.1.1.2
+             ^
+% Invalid input detected at '^' marker.
+
+alex(config)#22.1.1.3
+             ^
+% Invalid input detected at '^' marker.
+
+alex(config)#22.1.1.4
+             ^
+% Invalid input detected at '^' marker.
+
+alex(config)#22.1.1.5
+             ^
+% Invalid input detected at '^' marker.
+
+alex(config)#end
+alex#configure terminal
+Enter configuration commands, one per line.  End with CNTL/Z.
+swalex(config)#22.1.1.1
+               ^
+% Invalid input detected at '^' marker.
+
+swalex(config)#22.1.1.2
+               ^
+% Invalid input detected at '^' marker.
+
+swalex(config)#22.1.1.3
+               ^
+% Invalid input detected at '^' marker.
+
+swalex(config)#22.1.1.4
+               ^
+% Invalid input detected at '^' marker.
+
+swalex(config)#22.1.1.5
+               ^
+% Invalid input detected at '^' marker.
+
+swalex(config)#end
+swalex#

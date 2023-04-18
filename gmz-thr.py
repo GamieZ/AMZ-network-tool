@@ -3,6 +3,8 @@ from netmiko import ConnectHandler , NetmikoTimeoutException, NetmikoAuthenticat
 from datetime import datetime
 import  time , os , sys , pathlib , logging , ipaddress  , json , threading , requests ,schedule
 from napalm import get_network_driver
+import pandas as pd 
+
 ##########################################################################################
 # This is a decorator function that will handle exceptions in netmiko module functions
 # and will print a message to the user and return None if an exception is raised in the
@@ -17,8 +19,12 @@ from napalm import get_network_driver
 # and any other function that uses netmiko module functions
 
 ##########################################################################################
+""" 
+اعمل رن اند ويت ل نابلم + اكسبشن هاندلر
+فكس انلبلم اي اب 
 
-
+"""
+##########################################################################################
 
 def run_function_and_wait(func):
 
@@ -71,10 +77,10 @@ logger = logging.getLogger("ipaddress") # used only for debugging purposes to pr
 # @netmiko_exception_handler      # This will decorate the input_user_ip() function
 def input_user_ip():        # function to get user input for IP addresses separated by comma
     color.prYellow('**** USER input IP addresses separated by comma ****')       # print a message to the user
-    x=0                     # initialize x to 0 to be used in the while loop to count the number of attempts 
     color.prRed('ATTENTION: !!!')  # print a message to the user to inform him that he has only 3 attempts
     color.prYellow('you have 3 attempts only ') 
 
+    x=0                     # initialize x to 0 to be used in the while loop to count the number of attempts 
     while x < 3:       # while loop to count the number of attempts 
         try:      # try block to handle exceptions 
             IPS = input("Enter IPS separated by ',': ")         # get user input for IP addresses separated by comma
@@ -138,7 +144,68 @@ def input_file_ip():              # function to get user input for IP file
                 time.sleep(1.5)
                 return None             # return None
             
+##########################################################################################
 
+################################################################
+
+def input_file_ip_napalm():
+    color.prYellow('**** USER input IP addresses separated by comma ****')       # print a message to the user
+    color.prRed('ATTENTION: !!!')  # print a message to the user to inform him that he has only 3 attempts
+    color.prYellow('you have 3 attempts only ') 
+
+    x = 0
+    while x < 3:
+        try:
+            devicefile = input("Enter file name with IP addresses: ")
+            with open(devicefile) as f:
+                devices = f.read().splitlines()
+                hosts_list = []
+                for ip in devices:
+                    ip = ip.strip()
+                    ip=str(ip)
+                    driver = get_network_driver('ios')
+                    en_password = {'secret': 'cisco'}
+                    device = driver(hostname= ip,username='u1',password='cisco', optional_args=en_password)
+                    hosts_list.append(device)
+                    return hosts_list
+        except Exception as e:
+            print('Error(', str(e) + ')')
+            x += 1
+            print(f'You have {3 - x} attempts left')
+            if x == 3:
+                print('You have exceeded the number of attempts')
+                return None
+###########################################
+
+
+def input_user_ip_nap():        # function to get user input for IP addresses separated by comma
+    color.prYellow('**** USER input IP addresses separated by comma ****')       # print a message to the user
+    color.prRed('ATTENTION: !!!')  # print a message to the user to inform him that he has only 3 attempts
+    color.prYellow('you have 3 attempts only ') 
+
+    x=0                     # initialize x to 0 to be used in the while loop to count the number of attempts 
+    while x < 3:       # while loop to count the number of attempts 
+        try:      # try block to handle exceptions 
+            IPS = input("Enter IPS separated by ',': ")         # get user input for IP addresses separated by comma
+            hosts = IPS.split(',')          # split the user input by comma and store the result in a list called hosts
+            hosts_list = []          # create an empty list called hosts_list 
+            for ip in hosts:            # loop through the list hosts
+                driver = get_network_driver('ios')
+                en_password = {'secret': 'cisco'}
+                device = driver(ip, 'u1', 'cisco', optional_args=en_password)
+                hosts_list.append(device)
+
+            return hosts_list            # return the list hosts_list
+        except Exception as e:           # except block to handle exceptions
+            print('Error(', str(e) + ')  \nTry again')      # print a message to the user and return None if an exception is raised
+            x += 1                        # increment x by 1 to count the number of attempts
+            color.prRed(f'You have {3 - x} attempts left')  # print a message to the user to inform him how many attempts he has left
+            if x == 3:                  # if the number of attempts is equal to 3
+                # print a message to the user to inform him that he has exceeded the number of attempts   
+                color.prRed('You have exceeded the number of attempts')     
+                return None          # return None          
+
+################################################################
 def config_file():           # function to get user input for configuration file
     color.prYellow('**** USER input file name with configuration ****')     # print a message to the user
     color.prRed('ATTENTION: !!!')
@@ -622,7 +689,578 @@ def dhcp():
     
     connection.disconnect()
 
+##########################################################################################
+##########################################################################################
+##########################################################################################
+""" NAPALM """
+##########################################################################################
 
+################################################################
+#arp table
+################################################################
+def get_arp(host):
+    try:
+        host.open()
+        arptable = host.get_arp_table()
+        output = json.dumps(arptable,sort_keys=True,indent=4)
+        with open(f"get_arp{host}.txt", 'w') as fi:
+            fi.write(output)
+        with open(f'g') as f:
+            data = json.load(f)
+        df = pd.DataFrame.from_dict(pd.json_normalize(data), orient='columns')
+        print(df)
+        with open(f"get_arp{host}.txt", 'w') as fi:
+            fi.seek(0)
+            fi.truncate()
+            fi.write(df)
+        host.close()
+    except Exception as e:
+        print('Error(', str(e) + ')  \nTry again')
+
+def trubleshooting_arp():
+    x = 0
+    while x < 3:
+        try:
+            user = input('Enter 1 for file IPs or 2 for user input IPs: ')
+            if user == '1':
+                hosts_list = input_file_ip_napalm()
+                if hosts_list == None:
+                    return None
+            elif user == '2':
+                hosts_list = input_user_ip_nap()
+                if hosts_list == None:
+                    return None
+            else:
+                print('Error: Invalid input')
+                print('please Try again')
+                print  # print a blank line to
+                continue
+            break
+
+        except Exception as e:
+            print('Error(', str(e) + ')')
+            x += 1
+            print(f'You have {3 - x} attempts left')
+            if x == 3:
+                print('You have exceeded the number of attempts')
+                return None
+
+    if hosts_list == None:
+        print('No hosts to configure')
+        return None
+    
+    threads = []
+    for host in hosts_list:
+        t = threading.Thread(target=get_arp, args=(host,))
+        threads.append(t)
+        t.start()
+
+    for t in threads:
+        t.join()
+
+################################################################
+#interfaces
+################################################################
+def get_interfases(host):
+    try:
+        host.open()
+        output =host.get_interfaces()
+        output = json.dumps(output, sort_keys=True, indent=4)
+        with open(f"get_interface{host}.txt", 'w') as f:
+            f.write(output)
+        with open(f"get_interface{host}.txt") as f:
+            data = json.load(f)
+        df = pd.DataFrame.from_dict(pd.json_normalize(data), orient='columns')
+        print(df)
+        with open(f"get_interface{host}.txt", 'w') as fi:
+            fi.seek(0)
+            fi.truncate()
+            fi.write(df)
+
+
+
+        host.close()
+    except Exception as e:
+        print('Error(', str(e) + ')  \nTry again')
+
+#
+
+def trubleshooting_interfacses():
+    x = 0
+    while x < 3:
+        try:
+            user = input('Enter 1 for file IPs or 2 for user input IPs: ')
+            if user == '1':
+                hosts_list = input_file_ip_napalm()
+                if hosts_list == None:
+                    return None
+            elif user == '2':
+                hosts_list = input_user_ip_nap()
+                if hosts_list == None:
+                    return None
+            else:
+                print('Error: Invalid input')
+                print('please Try again')
+                print  # print a blank line to
+                continue
+            break
+
+        except Exception as e:
+            print('Error(', str(e) + ')')
+            x += 1
+            print(f'You have {3 - x} attempts left')
+            if x == 3:
+                print('You have exceeded the number of attempts')
+                return None
+
+    if hosts_list == None:
+        print('No hosts to configure')
+        return None
+    
+    threads = []
+    for host in hosts_list:
+        t = threading.Thread(target=get_interfases, args=(host,))
+        threads.append(t)
+        t.start()
+
+    for t in threads:
+        t.join()
+
+################################################################
+#get mac address table
+################################################################
+
+
+def get_mac_address_table(host):
+    try:
+        host.open()
+        output = host.get_mac_address_table()
+        output = json.dumps(output, sort_keys=True, indent=4)
+        with open(f"get_mac_address_table{host}.txt", 'w') as f:
+            f.write(output)
+        with open(f"get_mac_address_table{host}.txt") as f:
+            data = json.load(f)
+        df = pd.DataFrame.from_dict(pd.json_normalize(data), orient='columns')
+        print(df)
+        with open(f"get_mac_address_table{host}.txt", 'w') as fi:
+            fi.seek(0)
+            fi.truncate()
+            fi.write(df)
+
+        host.close()
+    except Exception as e:
+        print('Error(', str(e) + ')  \nTry again')
+
+def trubleshooting_get_mac():
+    x = 0
+    while x < 3:
+        try:
+            user = input('Enter 1 for file IPs or 2 for user input IPs: ')
+            if user == '1':
+                hosts_list = input_file_ip_napalm()
+                if hosts_list == None:
+                    return None
+            elif user == '2':
+                hosts_list = input_user_ip_nap()
+                if hosts_list == None:
+                    return None
+            else:
+                print('Error: Invalid input')
+                print('please Try again')
+                print  # print a blank line to
+                continue
+            break
+
+        except Exception as e:
+            print('Error(', str(e) + ')')
+            x += 1
+            print(f'You have {3 - x} attempts left')
+            if x == 3:
+                print('You have exceeded the number of attempts')
+                return None
+
+    if hosts_list == None:
+        print('No hosts to configure')
+        return None
+    
+    threads = []
+    for host in hosts_list:
+        t = threading.Thread(target=get_mac_address_table, args=(host,))
+        threads.append(t)
+        t.start()
+
+    for t in threads:
+        t.join()
+
+################################################################
+# get facts 
+################################################################
+def get_facts(host):
+    try:
+        host.open()
+        output = host.get_facts()
+        output = json.dumps(output, sort_keys=True, indent=4)
+        with open(f"get_facts{host}.txt", 'w') as f:
+            f.write(output)
+        with open(f"get_facts{host}.txt") as f:
+            data = json.load(f)
+        df = pd.DataFrame.from_dict(pd.json_normalize(data), orient='columns')
+        print(df)
+        with open(f"get_facts{host}.txt", 'w') as fi:
+            fi.seek(0)
+            fi.truncate()
+            fi.write(df)
+
+        host.close()
+    except Exception as e:
+        print('Error(', str(e) + ')  \nTry again')
+
+def trubleshooting_facts():
+    x = 0
+    while x < 3:
+        try:
+            user = input('Enter 1 for file IPs or 2 for user input IPs: ')
+            if user == '1':
+                hosts_list = input_file_ip_napalm()
+                if hosts_list == None:
+                    return None
+            elif user == '2':
+                hosts_list = input_user_ip_nap()
+                if hosts_list == None:
+                    return None
+            else:
+                print('Error: Invalid input')
+                print('please Try again')
+                print  # print a blank line to
+                continue
+            break
+
+        except Exception as e:
+            print('Error(', str(e) + ')')
+            x += 1
+            print(f'You have {3 - x} attempts left')
+            if x == 3:
+                print('You have exceeded the number of attempts')
+                return None
+
+    if hosts_list == None:
+        print('No hosts to configure')
+        return None
+    
+    threads = []
+    for host in hosts_list:
+        t = threading.Thread(target=get_facts, args=(host,))
+        threads.append(t)
+        t.start()
+
+    for t in threads:
+        t.join()
+
+
+    x = 0
+    while x < 3:
+        try:
+            user = input('Enter 1 for file IPs or 2 for user input IPs: ')
+            if user == '1':
+                hosts_list = input_file_ip_napalm()
+                if hosts_list == None:
+                    return None
+            elif user == '2':
+                hosts_list = input_user_ip_nap()
+                if hosts_list == None:
+                    return None
+            else:
+                print('Error: Invalid input')
+                print('please Try again')
+                print  # print a blank line to
+                continue
+            break
+
+        except Exception as e:
+            print('Error(', str(e) + ')')
+            x += 1
+            print(f'You have {3 - x} attempts left')
+            if x == 3:
+                print('You have exceeded the number of attempts')
+                return None
+
+    if hosts_list == None:
+        print('No hosts to configure')
+        return None
+    
+    threads = []
+    for host in hosts_list:
+        t = threading.Thread(target=get_facts, args=(host,))
+        threads.append(t)
+        t.start()
+
+    for t in threads:
+        t.join()
+
+################################################################
+# get vlan
+################################################################
+def vlan(host):
+    try:
+        host.open()
+        output =host.get_vlans()
+        output = json.dumps(output, sort_keys=True, indent=4)
+        with open(f"vlan{host}.txt", 'w') as f:
+            f.write(output)
+        with open(f"vlan{host}.txt") as f:
+            data = json.load(f)
+        df = pd.DataFrame.from_dict(pd.json_normalize(data), orient='columns')
+        print(df)
+        with open(f"vlan{host}.txt", 'w') as fi:
+            fi.seek(0)
+            fi.truncate()
+            fi.write(df)
+
+        host.close()
+    except Exception as e:
+        print('Error(', str(e) + ')  \nTry again')
+
+
+def trubleshooting_vlan():
+    x = 0
+    while x < 3:
+        try:
+            user = input('Enter 1 for file IPs or 2 for user input IPs: ')
+            if user == '1':
+                hosts_list = input_file_ip_napalm()
+                if hosts_list == None:
+                    return None
+            elif user == '2':
+                hosts_list = input_user_ip_nap()
+                if hosts_list == None:
+                    return None
+            else:
+                print('Error: Invalid input')
+                print('please Try again')
+                print  # print a blank line to
+                continue
+            break
+
+        except Exception as e:
+            print('Error(', str(e) + ')')
+            x += 1
+            print(f'You have {3 - x} attempts left')
+            if x == 3:
+                print('You have exceeded the number of attempts')
+                return None
+
+    if hosts_list == None:
+        print('No hosts to configure')
+        return None
+    
+    threads = []
+    for host in hosts_list:
+        t = threading.Thread(target=vlan, args=(host,))
+        threads.append(t)
+        t.start()
+
+    for t in threads:
+        t.join()
+
+################################################################
+# get interfaces counters
+################################################################
+def get_interfaces_counters(host):
+    try:
+        host.open()
+        host = get_network_driver('ios')
+        output=host.get_interfaces_counters()
+        output=json.dumps(output,sort_keys=True,indent=4)
+        with open(f"get_interfaces_counters{host}.txt", 'w') as f:
+            f.write(output)
+        with open(f"get_interfaces_counters{host}.txt") as f:
+            data = json.load(f)
+        df = pd.DataFrame.from_dict(pd.json_normalize(data), orient='columns')
+        print(df)
+        with open(f"get_interfaces_counters{host}.txt", 'w') as fi:
+            fi.seek(0)
+            fi.truncate()
+            fi.write(df)
+
+        host.close()
+    except Exception as e:
+        print('Error(', str(e) + ')  \nTry again')
+
+
+def trubleshooting_interfaces_counter():
+    x = 0
+    while x < 3:
+        try:
+            user = input('Enter 1 for file IPs or 2 for user input IPs: ')
+            if user == '1':
+                hosts_list = input_file_ip_napalm()
+                if hosts_list == None:
+                    return None
+            elif user == '2':
+                hosts_list = input_user_ip_nap()
+                if hosts_list == None:
+                    return None
+            else:
+                print('Error: Invalid input')
+                print('please Try again')
+                print  # print a blank line to
+                continue
+            break
+
+        except Exception as e:
+            print('Error(', str(e) + ')')
+            x += 1
+            print(f'You have {3 - x} attempts left')
+            if x == 3:
+                print('You have exceeded the number of attempts')
+                return None
+
+    if hosts_list == None:
+        print('No hosts to configure')
+        return None
+    
+    threads = []
+    for host in hosts_list:
+        t = threading.Thread(target=get_interfaces_counters, args=(host,))
+        threads.append(t)
+        t.start()
+
+    for t in threads:
+        t.join()
+
+################################################################
+# get interfaces ip
+################################################################
+def get_interfaces_ip(host):
+    try:
+        host.open()
+
+        output=host.get_interfaces_ip()
+        output = json.dumps(output, sort_keys=True, indent=4)
+        with open(f"get_interfaces_ip{host}.txt", 'w') as f:
+            f.write(output)
+        with open(f"get_interfaces_ip{host}.txt") as f:
+            data = json.load(f)
+        df = pd.DataFrame.from_dict(pd.json_normalize(data), orient='columns')
+        print(df)
+        with open(f"get_interfaces_ip{host}.txt", 'w') as fi:
+            fi.seek(0)
+            fi.truncate()
+            fi.write(df)
+
+        host.close()
+    except Exception as e:
+        print('Error(', str(e) + ')  \nTry again')
+
+
+def trubleshooting_interface_ip():
+    x = 0
+    while x < 3:
+        try:
+            user = input('Enter 1 for file IPs or 2 for user input IPs: ')
+            if user == '1':
+                hosts_list = input_file_ip_napalm()
+                if hosts_list == None:
+                    return None
+            elif user == '2':
+                hosts_list = input_user_ip_nap()
+                if hosts_list == None:
+                    return None
+            else:
+                print('Error: Invalid input')
+                print('please Try again')
+                print  # print a blank line to
+                continue
+            break
+
+        except Exception as e:
+            print('Error(', str(e) + ')')
+            x += 1
+            print(f'You have {3 - x} attempts left')
+            if x == 3:
+                print('You have exceeded the number of attempts')
+                return None
+
+    if hosts_list == None:
+        print('No hosts to configure')
+        return None
+    
+    threads = []
+    for host in hosts_list:
+        t = threading.Thread(target=get_interfaces_ip, args=(host,))
+        threads.append(t)
+        t.start()
+
+    for t in threads:
+        t.join()
+
+################################################################
+def get_bgp_details(host):
+    try:
+        host.open()
+        host = get_network_driver('ios')
+        output=host.get_bgp_neighbors_detail()
+        output = json.dumps(output, sort_keys=True, indent=4)
+        with open(f"get_bgp_details{host}.txt", 'w') as f:
+            f.write(output)
+        with open(f"get_bgp_details{host}.txt") as f:
+            data = json.load(f)
+        df = pd.DataFrame.from_dict(pd.json_normalize(data), orient='columns')
+        print(df)
+        with open(f"get_bgp_details{host}.txt", 'w') as fi:
+            fi.seek(0)
+            fi.truncate()
+            fi.write(df)
+
+        host.close()
+    except Exception as e:
+        print('Error(', str(e) + ')  \nTry again')
+
+
+def trubleshooting_bgp_details():
+    x = 0
+    while x < 3:
+        try:
+            user = input('Enter 1 for file IPs or 2 for user input IPs: ')
+            if user == '1':
+                hosts_list = input_file_ip_napalm()
+                if hosts_list == None:
+                    return None
+            elif user == '2':
+                hosts_list = input_user_ip_nap()
+                if hosts_list == None:
+                    return None
+            else:
+                print('Error: Invalid input')
+                print('please Try again')
+                print  # print a blank line to
+                continue
+            break
+
+        except Exception as e:
+            print('Error(', str(e) + ')')
+            x += 1
+            print(f'You have {3 - x} attempts left')
+            if x == 3:
+                print('You have exceeded the number of attempts')
+                return None
+
+    if hosts_list == None:
+        print('No hosts to configure')
+        return None
+    
+    threads = []
+    for host in hosts_list:
+        t = threading.Thread(target=get_bgp_details, args=(host,))
+        threads.append(t)
+        t.start()
+
+    for t in threads:
+        t.join()
+
+
+################################################################
+""" monitoring + backup """
 ##########################################################################################
 # 1. Create a function that will backup the configuration of multiple devices
 #    to a folder on the local machine with the name of the device and the date and time
@@ -740,10 +1378,8 @@ def monitor_interfaces(host):
         #    print('---------------------------------')
             interfaces.pop(0)  # remove the first line of the output
           #  print(interfaces)
-            print('---------------------------------')
             for interface in interfaces:
             #    print(interface)
-                print('---------------------------------')
                 if not "unassigned" in interface :
 
                     if 'down' in interface:
@@ -768,12 +1404,12 @@ def monitor_interfaces(host):
 
                         print(connection.find_prompt())
                         connection.enable()        
-                        connection.send_command_timing('conf t') #
-                        connection.send_command_timing(f'int {down_strip}')
-                        connection.send_command_timing('no shut')
-                        connection.send_command_timing('end')
+                        connection.send_command_timing('conf t ') #
+                        connection.send_command_timing(f'int {down_strip} ')
+                        connection.send_command_timing('no shut ')
+                        connection.send_command_timing('end ')
                         print(f'Interface {down_interface} is up')
-                    
+                        send_to_telegram(f'Interface {down_interface} is up')
                 # send an alert email, text message, or any other action
             time.sleep(10)       #error in this line
         except:
@@ -940,17 +1576,19 @@ main_options = '''
             [?] What do you want to do?
             \033[1;31m--------------------------------\033[0m
             [1] Configure devices
-            [2] Monitor devices
-            [3] Backup devices
-            [4] Exit
+            [2] trubleshooting devices
+            [3] Monitoring devices
+            [4] Backup devices
+            [5] Exit
             \033[1;31m--------------------------------\033[0m
             '''
 main_dict = {
     "1" : lambda:None,
     "2" : lambda:None,
-    "3" : schedule_backup,
-    "4" : lambda: sys.exit()
-}   
+    "3" : monitor_interfaces_th,
+    "4" : schedule_backup,
+    "5" : lambda: sys.exit()
+    }   
 conf_option = '''
             [?] What do you want to perform?
             \033[1;31m--------------------------------\033[0m
@@ -961,8 +1599,7 @@ conf_option = '''
             [5] Create VLAN
             [6] Interface VLAN
             [7] DHCP
-            [8] Monitor interfaces
-            [9] \033[1;33mBack to main menu\033[0m
+            [8] \033[1;33mBack to main menu\033[0m
             \033[1;31m--------------------------------\033[0m
             '''
 
@@ -975,10 +1612,35 @@ conf_dic = {
     "5" : vlan_create,
     "6" : int_vlan,
     "7" : dhcp ,
-    "8" : monitor_interfaces_th,
-    "9" : lambda : None,
+    "8" : lambda : None,
 }
 
+trubleshooting_option = '''
+            [?] What do you want to perform?
+            \033[1;31m--------------------------------\033[0m
+            [1] Get Arp table
+            [2] Get Mac address table
+            [3] Get interface status
+            [4] Get interface counters
+            [5] Get interface ip address
+            [6] Get vlans
+            [7] Get bgp neighbors
+            [8] Get Facts
+            [9] \033[1;33mBack to main menu\033[0m
+            \033[1;31m--------------------------------\033[0m
+            '''
+
+trubleshooting_dic = {
+    "1" : trubleshooting_arp,
+    "2" : trubleshooting_get_mac,
+    "3" : trubleshooting_interfacses,
+    "4" : trubleshooting_interfaces_counter,
+    "5" : trubleshooting_interface_ip,
+    "6" : trubleshooting_vlan,
+    "7" : trubleshooting_bgp_details,
+    "8" : trubleshooting_facts,
+    "9" : lambda : None,
+}
 
 
 def main():
@@ -999,7 +1661,7 @@ def main():
                     color.pr(logo())    # print the logo of the tool
                     try:
                         conf_choice = input("\n%s" % conf_option + blue + '[+] You choose: ' + reset)
-                        if conf_choice == '9':  # exit submenu and go back to main menu
+                        if conf_choice == '8':  # exit submenu and go back to main menu
                             break
                         conf_dic.get(conf_choice)()  # call function based on sub_choice
                     except KeyboardInterrupt:
@@ -1017,10 +1679,10 @@ def main():
                     os.system('cls' if os.name == 'nt' else 'clear')
                     color.pr(logo())  # print the logo of the tool
                     try:
-                        conf_choice = input("\n%s" % conf_option + blue + '[+] You choose: ' + reset)
-                        if conf_choice == '9':  # exit submenu and go back to main menu
+                        trub_choice = input("\n%s" % trubleshooting_option + blue + '[+] You choose: ' + reset)
+                        if trub_choice == '9':  # exit submenu and go back to main menu
                             break
-                        conf_dic.get(conf_choice)()  # call function based on sub_choice
+                        trubleshooting_dic.get(trub_choice)()  # call function based on sub_choice
                     except KeyboardInterrupt:
                         print(red + '[!] Ctrl + C detected\n[!] Exiting' + reset)
                         sys.exit(0)
