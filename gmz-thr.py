@@ -2,8 +2,10 @@ import threading
 from netmiko import ConnectHandler , NetmikoTimeoutException, NetmikoAuthenticationException ,NetmikoBaseException
 from datetime import datetime
 import  time , os , sys , pathlib , logging , ipaddress  , json , threading , requests ,schedule
-from napalm import get_network_driver
+from napalm import get_network_driver 
+from napalm.base.exceptions import ConnectionException  , ConnectAuthError
 import pandas as pd 
+
 
 ##########################################################################################
 # This is a decorator function that will handle exceptions in netmiko module functions
@@ -19,26 +21,20 @@ import pandas as pd
 # and any other function that uses netmiko module functions
 
 ##########################################################################################
-""" 
-اعمل رن اند ويت ل نابلم + اكسبشن هاندلر
-فكس انلبلم اي اب 
-
-"""
 ##########################################################################################
 
-def run_function_and_wait(func):
 
-    def netmiko_exception_handler(*args, **kwargs):           # This is a decorator function takes a function as an argument
+def netmiko_exception_handler(func):           # This is a decorator function takes a function as an argument
     
-        def wrapper(*args, **kwargs):          # This is a wrapper function that will handle exceptions in netmiko module functions
+    def wrapper(*args, **kwargs):          # This is a wrapper function that will handle exceptions in netmiko module functions
             try:
                 return func(*args, **kwargs)  # This will execute the function that is decorated by this decorator function
             except NetmikoTimeoutException as e:           # This will handle timeout errors
-                print('Error(', str(e) + ')  \nTry again')  # and will print a message to the user and return None if an exception is raised in the
+                print(f"Connection error: {str(e)} \nTry again'")  # and will print a message to the user and return None if an exception is raised in the
                 menu()
                 return None
             except NetmikoAuthenticationException as e:  # this will handle authentication errors
-                print('Error(', str(e) + ')  \nTry again')
+                print(f"Authentication error: {str(e)}")
                 menu()
                 return None                      # and will print a message to the user and return None if an exception is raised 
             except NetmikoBaseException as e:         # this will handle other errors during connection establishment
@@ -46,14 +42,13 @@ def run_function_and_wait(func):
                 menu()
                 return None    
             except Exception as e:             # this will handle other errors like :error message, retry the connection, or terminate the program.
-                print('Error(', str(e) + ')  \nTry again')
+                print(f"Error: {str(e)} \nTry again")
                 menu()
                 return None
-        
-        wrapper_result = wrapper(*args, **kwargs)
-        input("\033[1;33mPress Enter to return to the menu.\033[0m")        
-        return wrapper_result
-    return netmiko_exception_handler  # This will return the decorator function
+            finally:
+                input("\033[1;33mPress Enter to return to the menu.\033[0m")
+    return wrapper
+
 def execute_time(func):
     def wrapper(*args, **kwargs):
         start_time = time.time()
@@ -64,10 +59,22 @@ def execute_time(func):
     return wrapper
 
 ##########################################################################################
-logging.basicConfig(filename='test.log', level=logging.DEBUG) # This will create a log file and set the logging level to DEBUG 
-logger = logging.getLogger("ipaddress") # used only for debugging purposes to print the log messages to the console
-
 "****************************************************************************************"
+def napalm_exception_handler(func):
+    def wrapper(*args, **kwargs):
+        try:
+            result = func(*args, **kwargs)
+            return result
+        except ConnectionException as e:
+            print(f"Connection error: {str(e)}")
+        except ConnectAuthError as e :
+            print(f"Authentication error: {str(e)}")
+        except Exception as e:
+            print(f"Error: {str(e)}")
+        finally:
+            input("\033[1;33mPress Enter to return to the menu.\033[0m")
+        return None
+    return wrapper
 ##########################################################################################
 # 1. Create a function that will take user input for IP addresses
 # 2. Create a function that will take user input for IP file
@@ -163,10 +170,7 @@ def input_file_ip_napalm():
                 for ip in devices:
                     ip = ip.strip()
                     ip=str(ip)
-                    driver = get_network_driver('ios')
-                    en_password = {'secret': 'cisco'}
-                    device = driver(hostname= ip,username='u1',password='cisco', optional_args=en_password)
-                    hosts_list.append(device)
+                    hosts_list.append(ip)
                     return hosts_list
         except Exception as e:
             print('Error(', str(e) + ')')
@@ -178,7 +182,7 @@ def input_file_ip_napalm():
 ###########################################
 
 
-def input_user_ip_nap():        # function to get user input for IP addresses separated by comma
+def input_user_ip_napalm():        # function to get user input for IP addresses separated by comma
     color.prYellow('**** USER input IP addresses separated by comma ****')       # print a message to the user
     color.prRed('ATTENTION: !!!')  # print a message to the user to inform him that he has only 3 attempts
     color.prYellow('you have 3 attempts only ') 
@@ -243,7 +247,6 @@ def validate_ip_address(address):
 ##########################################################################################
 # 1. Create a function that configures multiple devices with same configuration file
 ##########################################################################################
-@run_function_and_wait
 def configure_device_same(host, configfile):
     color.prLightPurple(f'**** Configure device {host["ip"]} with same configuration file ****')
     try:
@@ -266,7 +269,6 @@ def configure_device_same(host, configfile):
         print('Error(', str(e) + ')  \nTry again')
 
 
-@run_function_and_wait
 def multi_device_same_config():
     color.prYellow('**** Configure multiple devices with same configuration file ****')
     color.prRed('ATTENTION: !!!')
@@ -333,7 +335,6 @@ def multi_device_same_config():
 # 1. Create a function that configures multiple devices with a unique configuration file
 #        for each device
 ##########################################################################################
-@run_function_and_wait
 def configure_device_unique(host):
     try:
 
@@ -353,7 +354,6 @@ def configure_device_unique(host):
         print('Error(', str(e) + ')  \nTry again')
 
 
-@run_function_and_wait
 def multi_device_unique_config():
     """
     Prompt user for a list of device IPs, connect to each device,
@@ -446,7 +446,7 @@ def bgp():
         print("done")
 
     connection.disconnect()
-@run_function_and_wait
+
 def mp_bgp():
     
     ip=validate_ip_address(input('enter router IP to connect :'))
@@ -700,8 +700,11 @@ def dhcp():
 ################################################################
 def get_arp(host):
     try:
-        host.open()
-        arptable = host.get_arp_table()
+        driver = get_network_driver('ios')
+        en_password = {'secret': 'cisco'}
+        device = driver(hostname= host,username='u1',password='cisco', optional_args=en_password)
+        device.open()
+        arptable = device.get_arp_table()
         output = json.dumps(arptable,sort_keys=True,indent=4)
         with open(f"get_arp{host}.txt", 'w') as fi:
             fi.write(output)
@@ -717,6 +720,7 @@ def get_arp(host):
     except Exception as e:
         print('Error(', str(e) + ')  \nTry again')
 
+@napalm_exception_handler
 def trubleshooting_arp():
     x = 0
     while x < 3:
@@ -727,7 +731,7 @@ def trubleshooting_arp():
                 if hosts_list == None:
                     return None
             elif user == '2':
-                hosts_list = input_user_ip_nap()
+                hosts_list = input_user_ip_napalm()
                 if hosts_list == None:
                     return None
             else:
@@ -795,7 +799,7 @@ def trubleshooting_interfacses():
                 if hosts_list == None:
                     return None
             elif user == '2':
-                hosts_list = input_user_ip_nap()
+                hosts_list = input_user_ip_napalm()
                 if hosts_list == None:
                     return None
             else:
@@ -861,7 +865,7 @@ def trubleshooting_get_mac():
                 if hosts_list == None:
                     return None
             elif user == '2':
-                hosts_list = input_user_ip_nap()
+                hosts_list = input_user_ip_napalm()
                 if hosts_list == None:
                     return None
             else:
@@ -925,7 +929,7 @@ def trubleshooting_facts():
                 if hosts_list == None:
                     return None
             elif user == '2':
-                hosts_list = input_user_ip_nap()
+                hosts_list = input_user_ip_napalm()
                 if hosts_list == None:
                     return None
             else:
@@ -966,7 +970,7 @@ def trubleshooting_facts():
                 if hosts_list == None:
                     return None
             elif user == '2':
-                hosts_list = input_user_ip_nap()
+                hosts_list = input_user_ip_napalm()
                 if hosts_list == None:
                     return None
             else:
@@ -1031,7 +1035,7 @@ def trubleshooting_vlan():
                 if hosts_list == None:
                     return None
             elif user == '2':
-                hosts_list = input_user_ip_nap()
+                hosts_list = input_user_ip_napalm()
                 if hosts_list == None:
                     return None
             else:
@@ -1097,7 +1101,7 @@ def trubleshooting_interfaces_counter():
                 if hosts_list == None:
                     return None
             elif user == '2':
-                hosts_list = input_user_ip_nap()
+                hosts_list = input_user_ip_napalm()
                 if hosts_list == None:
                     return None
             else:
@@ -1163,7 +1167,7 @@ def trubleshooting_interface_ip():
                 if hosts_list == None:
                     return None
             elif user == '2':
-                hosts_list = input_user_ip_nap()
+                hosts_list = input_user_ip_napalm()
                 if hosts_list == None:
                     return None
             else:
@@ -1227,7 +1231,7 @@ def trubleshooting_bgp_details():
                 if hosts_list == None:
                     return None
             elif user == '2':
-                hosts_list = input_user_ip_nap()
+                hosts_list = input_user_ip_napalm()
                 if hosts_list == None:
                     return None
             else:
@@ -1336,7 +1340,6 @@ def backup_all():
             t.join()
     except Exception as e:
         print('Error(', str(e) + ')  \nTry again')
-@run_function_and_wait
 def schedule_backup():
     ask = input('Do you want to schedule daily backup? (y/n): ')
     if ask == 'y':
