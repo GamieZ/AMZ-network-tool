@@ -7,6 +7,43 @@ from napalm.base.exceptions import ConnectionException  , ConnectAuthError
 import pandas as pd 
 
 
+"""
+extra  usefull functions
+
+"""
+def send_to_telegram(message):      # this function will send a message to telegram and take the message as a parameter 
+
+    apiToken = '5803750722:AAGLa0rDUryF3lfsHWI1ycONlkpbR32V0dQ'     # get the token from @BotFather 
+    chatID = '-1001694983867'                                       # get the chat id from @getmyid_bot
+    apiURL = f'https://api.telegram.org/bot{apiToken}/sendMessage'    # create the api url
+
+    try:            # try to send the message 
+        requests.post(apiURL, json={'chat_id': chatID, 'text': message})     # send the message
+        print("sending to Telegram...")             # print a message
+    except Exception as e:      # if there is an error
+        e = 'Error'         # set the error message
+        print(e)       # print the error message
+
+
+class color:       # this class will print the text in different colors 
+    def prRed(skk): print("\033[91m {}\033[00m" .format(skk))  # this function will print the text in red color
+    def prGreen(skk): print("\033[92m {}\033[00m" .format(skk)) # this function will print the text in green color
+    def prYellow(skk): print("\033[93m {}\033[00m" .format(skk))    # this function will print the text in yellow color
+    def prLightPurple(skk): print("\033[94m {}\033[00m" .format(skk))  # this function will print the text in light purple color
+    def prPurple(skk): print("\033[95m {}\033[00m" .format(skk))   # this function will print the text in purple color
+    def prCyan(skk): print("\033[96m {}\033[00m" .format(skk))   # this function will print the text in cyan color
+    def prLightGray(skk): print("\033[97m {}\033[00m" .format(skk))      # this function will print the text in light gray color
+    def pr(skk): print('{}'.format(skk))
+
+green="\033[1;32m"  # this variable will print the text in green color
+red = "\033[1;31m"    # this variable will print the text in red color
+yellow = "\033[1;33m"   # this variable will print the text in yellow color
+purple = "\033[1;35m"  # this variable will print the text in purple color 
+cyan = "\033[1;36m" # this variable will print the text in cyan color
+blue = "\033[1;34m" # this variable will print the text in blue color
+reset = "\033[0m"  # this variable will reset the color to default color
+
+
 ##########################################################################################
 # This is a decorator function that will handle exceptions in netmiko module functions
 # and will print a message to the user and return None if an exception is raised in the
@@ -25,42 +62,33 @@ import pandas as pd
 
 
 def netmiko_exception_handler(func):           # This is a decorator function takes a function as an argument
-    
+    start_time = time.time()
     def wrapper(*args, **kwargs):          # This is a wrapper function that will handle exceptions in netmiko module functions
             try:
                 return func(*args, **kwargs)  # This will execute the function that is decorated by this decorator function
             except NetmikoTimeoutException as e:           # This will handle timeout errors
                 print(f"Connection error: {str(e)} \nTry again'")  # and will print a message to the user and return None if an exception is raised in the
-                menu()
                 return None
             except NetmikoAuthenticationException as e:  # this will handle authentication errors
                 print(f"Authentication error: {str(e)}")
-                menu()
                 return None                      # and will print a message to the user and return None if an exception is raised 
             except NetmikoBaseException as e:         # this will handle other errors during connection establishment
                 print('Error(', str(e) + ')  \nTry again')
-                menu()
                 return None    
             except Exception as e:             # this will handle other errors like :error message, retry the connection, or terminate the program.
                 print(f"Error: {str(e)} \nTry again")
-                menu()
                 return None
             finally:
+                end_time = time.time()
+                print(f"the {func.__name__} took "+ green+ f"{end_time - start_time}"+reset+ "seconds to run.")
                 input("\033[1;33mPress Enter to return to the menu.\033[0m")
     return wrapper
 
-def execute_time(func):
-    def wrapper(*args, **kwargs):
-        start_time = time.time()
-        result = func(*args, **kwargs)
-        end_time = time.time()
-        print(f"the {func.__name__} took {end_time - start_time} seconds to run.")
-        return result
-    return wrapper
 
 ##########################################################################################
 "****************************************************************************************"
 def napalm_exception_handler(func):
+    start_time = time.time()
     def wrapper(*args, **kwargs):
         try:
             result = func(*args, **kwargs)
@@ -72,8 +100,9 @@ def napalm_exception_handler(func):
         except Exception as e:
             print(f"Error: {str(e)}")
         finally:
+            end_time = time.time()
+            print(f"the {func.__name__} took "+ green+ f"{end_time - start_time}"+reset+ "seconds to run.")
             input("\033[1;33mPress Enter to return to the menu.\033[0m")
-        return None
     return wrapper
 ##########################################################################################
 # 1. Create a function that will take user input for IP addresses
@@ -171,7 +200,7 @@ def input_file_ip_napalm():
                     ip = ip.strip()
                     ip=str(ip)
                     hosts_list.append(ip)
-                    return hosts_list
+                return hosts_list
         except Exception as e:
             print('Error(', str(e) + ')')
             x += 1
@@ -194,11 +223,9 @@ def input_user_ip_napalm():        # function to get user input for IP addresses
             hosts = IPS.split(',')          # split the user input by comma and store the result in a list called hosts
             hosts_list = []          # create an empty list called hosts_list 
             for ip in hosts:            # loop through the list hosts
-                driver = get_network_driver('ios')
-                en_password = {'secret': 'cisco'}
-                device = driver(ip, 'u1', 'cisco', optional_args=en_password)
-                hosts_list.append(device)
-
+                ip = ip.strip()
+                ip=str(ip)
+                hosts_list.append(ip)
             return hosts_list            # return the list hosts_list
         except Exception as e:           # except block to handle exceptions
             print('Error(', str(e) + ')  \nTry again')      # print a message to the user and return None if an exception is raised
@@ -485,9 +512,7 @@ def mp_bgp():
 
 
 
-    
-     
-    
+
 "***************************************************************************************"
 ##########################################################################################
 # 1. Create a function that configures vlan on multiple devices  and eable dhcp pool
@@ -503,19 +528,20 @@ def create_vlan(host,st,end,i):
     print(promt)
     if '>' in promt:
         connection.enable()
-        time.sleep(5)
         print('enter enable mode')
-        connection.send_command_timing ("conf t")
-        promt = connection.find_prompt()
-        print(promt)
+    connection.send_command_timing ("conf t ")
+    promt = connection.find_prompt()
+    print(promt)
     for vlan in range(int(st),int(end),int(i)):
-        send="vlan "+str(vlan)
-        print(f'{send} + {host["ip"]}') 
+        send="vlan "+str(vlan)+" "
+        print (send)
+        print ("*"*5)
+        print(f'{send} {host["ip"]}') 
         output=connection.send_command_timing(send)
         print(output)
-    time.sleep(5)
     connection.disconnect()
 
+@netmiko_exception_handler
 def vlan_create():
     x = 0
     while x < 3:
@@ -559,40 +585,8 @@ def vlan_create():
 
     for t in threads:
         t.join()
-    
-    
-    for host in hosts_list :
-        connection=ConnectHandler(**host)
-        promt =connection.find_prompt()
-        print(promt)
-        if '>' in promt:
-            connection.enable()
-            print('enter enable mode')
-        connection.send_command_timing('conf t')
-        for vlan in range(int(st),int(end),int(i)):
-            print(vlan)
-            send="vlan "+str(vlan)
-            print(send)
-            output=connection.send_command_timing(send)
-            print(output)
-        connection.disconnect()
 
-    for host in hosts_list :
-        connection=ConnectHandler(**host)
-        promt =connection.find_prompt()
-        print(promt)
-        if '>' in promt:
-            connection.enable()
-            print('enter enable mode')
-        connection.send_command_timing('conf t')
-        for vlan in range(int(st),int(end),int(i)):
-            print(vlan)
-            send="vlan "+str(vlan)
-            print(send)
-            output=connection.send_command_timing(send)
-            print(output)
-        connection.disconnect()
-
+    color.prGreen('********** VLANs created **********')
 
 
 #def int_vlan(ip):  
@@ -706,17 +700,17 @@ def get_arp(host):
         device.open()
         arptable = device.get_arp_table()
         output = json.dumps(arptable,sort_keys=True,indent=4)
-        with open(f"get_arp{host}.txt", 'w') as fi:
+        with open(f"get_arp {host}.txt", 'w') as fi:
             fi.write(output)
-        with open(f'g') as f:
+        with open(f"get_arp {host}.txt" ,"r") as f:
             data = json.load(f)
         df = pd.DataFrame.from_dict(pd.json_normalize(data), orient='columns')
         print(df)
-        with open(f"get_arp{host}.txt", 'w') as fi:
+        with open(f"get_arp {host}.txt", 'w') as fi:
             fi.seek(0)
             fi.truncate()
-            fi.write(df)
-        host.close()
+            fi.write(df.to_string())
+        device.close()
     except Exception as e:
         print('Error(', str(e) + ')  \nTry again')
 
@@ -767,28 +761,27 @@ def trubleshooting_arp():
 ################################################################
 def get_interfases(host):
     try:
-        host.open()
-        output =host.get_interfaces()
-        output = json.dumps(output, sort_keys=True, indent=4)
-        with open(f"get_interface{host}.txt", 'w') as f:
+        driver = get_network_driver('ios')
+        en_password = {'secret': 'cisco'}
+        device = driver(hostname= host,username='u1',password='cisco', optional_args=en_password)
+        device.open()
+        interface =device.get_interfaces()
+        output = json.dumps(interface, sort_keys=True, indent=4)
+        with open(f"get_interface {host}.txt", 'w') as f:
             f.write(output)
-        with open(f"get_interface{host}.txt") as f:
+        with open(f"get_interface {host}.txt") as f:
             data = json.load(f)
         df = pd.DataFrame.from_dict(pd.json_normalize(data), orient='columns')
         print(df)
         with open(f"get_interface{host}.txt", 'w') as fi:
             fi.seek(0)
             fi.truncate()
-            fi.write(df)
-
-
-
-        host.close()
+            fi.write(df.to_string())
+        device.close()
     except Exception as e:
         print('Error(', str(e) + ')  \nTry again')
 
-#
-
+@napalm_exception_handler
 def trubleshooting_interfacses():
     x = 0
     while x < 3:
@@ -837,24 +830,27 @@ def trubleshooting_interfacses():
 
 def get_mac_address_table(host):
     try:
-        host.open()
-        output = host.get_mac_address_table()
-        output = json.dumps(output, sort_keys=True, indent=4)
-        with open(f"get_mac_address_table{host}.txt", 'w') as f:
+        driver = get_network_driver('ios')
+        en_password = {'secret': 'cisco'}
+        device = driver(hostname= host,username='u1',password='cisco', optional_args=en_password)
+        device.open()
+        mac_add = device.get_mac_address_table()
+        output = json.dumps(mac_add, sort_keys=True, indent=4)
+        with open(f"get_mac_address_table {host}.txt", 'w') as f:
             f.write(output)
-        with open(f"get_mac_address_table{host}.txt") as f:
+        with open(f"get_mac_address_table {host}.txt") as f:
             data = json.load(f)
         df = pd.DataFrame.from_dict(pd.json_normalize(data), orient='columns')
         print(df)
-        with open(f"get_mac_address_table{host}.txt", 'w') as fi:
+        with open(f"get_mac_address_table {host}.txt", 'w') as fi:
             fi.seek(0)
             fi.truncate()
-            fi.write(df)
-
-        host.close()
+            fi.write(df.to_string())
+        device.close()
     except Exception as e:
         print('Error(', str(e) + ')  \nTry again')
 
+@napalm_exception_handler
 def trubleshooting_get_mac():
     x = 0
     while x < 3:
@@ -901,24 +897,28 @@ def trubleshooting_get_mac():
 ################################################################
 def get_facts(host):
     try:
-        host.open()
-        output = host.get_facts()
+        driver = get_network_driver('ios')
+        en_password = {'secret': 'cisco'}
+        device = driver(hostname= host,username='u1',password='cisco', optional_args=en_password)
+        device.open()
+        output = device.get_facts()
         output = json.dumps(output, sort_keys=True, indent=4)
-        with open(f"get_facts{host}.txt", 'w') as f:
+        with open(f"get_facts {host}.txt", 'w') as f:
             f.write(output)
-        with open(f"get_facts{host}.txt") as f:
+        with open(f"get_facts {host}.txt") as f:
             data = json.load(f)
         df = pd.DataFrame.from_dict(pd.json_normalize(data), orient='columns')
         print(df)
-        with open(f"get_facts{host}.txt", 'w') as fi:
+        with open(f"get_facts {host}.txt", 'w') as fi:
             fi.seek(0)
             fi.truncate()
-            fi.write(df)
+            fi.write(df.to_string())
 
-        host.close()
+        device.close()
     except Exception as e:
         print('Error(', str(e) + ')  \nTry again')
 
+@napalm_exception_handler
 def trubleshooting_facts():
     x = 0
     while x < 3:
@@ -1006,25 +1006,29 @@ def trubleshooting_facts():
 ################################################################
 def vlan(host):
     try:
-        host.open()
-        output =host.get_vlans()
+        driver = get_network_driver('ios')
+        en_password = {'secret': 'cisco'}
+        device = driver(hostname= host,username='u1',password='cisco', optional_args=en_password)
+        device.open()
+        output =device.get_vlans()
         output = json.dumps(output, sort_keys=True, indent=4)
-        with open(f"vlan{host}.txt", 'w') as f:
+        with open(f"vlan{host} .txt", 'w') as f:
             f.write(output)
-        with open(f"vlan{host}.txt") as f:
+        with open(f"vlan{host} .txt") as f:
             data = json.load(f)
         df = pd.DataFrame.from_dict(pd.json_normalize(data), orient='columns')
         print(df)
-        with open(f"vlan{host}.txt", 'w') as fi:
+        with open(f"vlan{host} .txt", 'w') as fi:
             fi.seek(0)
             fi.truncate()
-            fi.write(df)
+            fi.write(df.to_string())
 
-        host.close()
+        device.close()
     except Exception as e:
         print('Error(', str(e) + ')  \nTry again')
 
 
+@napalm_exception_handler
 def trubleshooting_vlan():
     x = 0
     while x < 3:
@@ -1071,26 +1075,28 @@ def trubleshooting_vlan():
 ################################################################
 def get_interfaces_counters(host):
     try:
-        host.open()
-        host = get_network_driver('ios')
-        output=host.get_interfaces_counters()
+        driver = get_network_driver('ios')
+        en_password = {'secret': 'cisco'}
+        device = driver(hostname= host,username='u1',password='cisco', optional_args=en_password)
+        device.open()
+        output=device.get_interfaces_counters()
         output=json.dumps(output,sort_keys=True,indent=4)
-        with open(f"get_interfaces_counters{host}.txt", 'w') as f:
+        with open(f"get_interfaces_counters {host}.txt", 'w') as f:
             f.write(output)
-        with open(f"get_interfaces_counters{host}.txt") as f:
+        with open(f"get_interfaces_counters {host}.txt") as f:
             data = json.load(f)
         df = pd.DataFrame.from_dict(pd.json_normalize(data), orient='columns')
         print(df)
-        with open(f"get_interfaces_counters{host}.txt", 'w') as fi:
+        with open(f"get_interfaces_counters {host}.txt", 'w') as fi:
             fi.seek(0)
             fi.truncate()
-            fi.write(df)
+            fi.write(df.to_string())
 
-        host.close()
+        device.close()
     except Exception as e:
         print('Error(', str(e) + ')  \nTry again')
 
-
+@napalm_exception_handler
 def trubleshooting_interfaces_counter():
     x = 0
     while x < 3:
@@ -1137,26 +1143,28 @@ def trubleshooting_interfaces_counter():
 ################################################################
 def get_interfaces_ip(host):
     try:
-        host.open()
-
-        output=host.get_interfaces_ip()
+        driver = get_network_driver('ios')
+        en_password = {'secret': 'cisco'}
+        device = driver(hostname= host,username='u1',password='cisco', optional_args=en_password)
+        device.open()
+        output=device.get_interfaces_ip()
         output = json.dumps(output, sort_keys=True, indent=4)
-        with open(f"get_interfaces_ip{host}.txt", 'w') as f:
+        with open(f"get_interfaces_ip {host}.txt", 'w') as f:
             f.write(output)
-        with open(f"get_interfaces_ip{host}.txt") as f:
+        with open(f"get_interfaces_ip {host}.txt") as f:
             data = json.load(f)
         df = pd.DataFrame.from_dict(pd.json_normalize(data), orient='columns')
         print(df)
-        with open(f"get_interfaces_ip{host}.txt", 'w') as fi:
+        with open(f"get_interfaces_ip {host}.txt", 'w') as fi:
             fi.seek(0)
             fi.truncate()
-            fi.write(df)
+            fi.write(df.to_string())
 
-        host.close()
+        device.close()
     except Exception as e:
         print('Error(', str(e) + ')  \nTry again')
 
-
+@napalm_exception_handler
 def trubleshooting_interface_ip():
     x = 0
     while x < 3:
@@ -1201,26 +1209,28 @@ def trubleshooting_interface_ip():
 ################################################################
 def get_bgp_details(host):
     try:
-        host.open()
-        host = get_network_driver('ios')
-        output=host.get_bgp_neighbors_detail()
+        driver = get_network_driver('ios')
+        en_password = {'secret': 'cisco'}
+        device = driver(hostname= host,username='u1',password='cisco', optional_args=en_password)
+        device.open()
+        output=device.get_bgp_neighbors_detail()
         output = json.dumps(output, sort_keys=True, indent=4)
-        with open(f"get_bgp_details{host}.txt", 'w') as f:
+        with open(f"get_bgp_details {host}.txt", 'w') as f:
             f.write(output)
-        with open(f"get_bgp_details{host}.txt") as f:
+        with open(f"get_bgp_details {host}.txt") as f:
             data = json.load(f)
         df = pd.DataFrame.from_dict(pd.json_normalize(data), orient='columns')
         print(df)
-        with open(f"get_bgp_details{host}.txt", 'w') as fi:
+        with open(f"get_bgp_details {host}.txt", 'w') as fi:
             fi.seek(0)
             fi.truncate()
-            fi.write(df)
+            fi.write(df.to_string())
 
-        host.close()
+        device.close()
     except Exception as e:
         print('Error(', str(e) + ')  \nTry again')
 
-
+@napalm_exception_handler
 def trubleshooting_bgp_details():
     x = 0
     while x < 3:
@@ -1295,10 +1305,9 @@ def configure_device_backup(host ,newpath,hour,minute,second):
         print("Backup failed")
         print('Error(', str(e) + ')  \nTry again')
 
-
 def backup_all():
     try:
-        with open('devices.txt') as f:          # reading the devices ip address from a file into a list (each ip on its own line)
+        with open('devices') as f:          # reading the devices ip address from a file into a list (each ip on its own line)
             devices = f.read().splitlines()     # reading the devices ip address from a file into a list (each ip on its own line)
 
         device_list = list()            # creating an empty list
@@ -1340,9 +1349,11 @@ def backup_all():
             t.join()
     except Exception as e:
         print('Error(', str(e) + ')  \nTry again')
+
+@netmiko_exception_handler
 def schedule_backup():
     ask = input('Do you want to schedule daily backup? (y/n): ')
-    if ask == 'y':
+    if ask == 'y'or ask == 'Y'or ask == 'yes' or ask == 'Yes':
         hour = int(input("Enter the hour (0-23) to schedule the backup: "))
         minute = int(input("Enter the minute (0-59) to schedule the backup: "))
         schedule.every().day.at(f"{hour:02d}:{minute:02d}").do(backup_all)
@@ -1350,7 +1361,7 @@ def schedule_backup():
         while True:
             schedule.run_pending()
             time.sleep(1)
-    elif ask == 'n':
+    elif ask == 'n' or ask == 'N' or ask == 'no' or ask == 'No':
         color.prYellow('start ONE TIME backup')
         backup_all()
     else:
@@ -1424,7 +1435,7 @@ def monitor_interfaces(host):
                     #       print(f"Interface {intf} on {device['hostname']} has {in_errors} input errors.")
 
 ##########################
-
+@netmiko_exception_handler
 def monitor_interfaces_th():   
         color.prYellow('**** Configure multiple devices with same configuration file ****')
         color.prRed('ATTENTION: !!!')
@@ -1490,45 +1501,6 @@ def monitor_interfaces_th():
 ###########################################################################################
 # Main program  cli interface
 ###########################################################################################
-
-"""
-extra  usefull functions
-
-"""
-def send_to_telegram(message):      # this function will send a message to telegram and take the message as a parameter 
-
-    apiToken = '5803750722:AAGLa0rDUryF3lfsHWI1ycONlkpbR32V0dQ'     # get the token from @BotFather 
-    chatID = '-1001694983867'                                       # get the chat id from @getmyid_bot
-    apiURL = f'https://api.telegram.org/bot{apiToken}/sendMessage'    # create the api url
-
-    try:            # try to send the message 
-        response = requests.post(apiURL, json={'chat_id': chatID, 'text': message})     # send the message
-        print("sending to Telegram...")             # print a message
- 
-    except Exception as e:      # if there is an error
-        e = 'Error'         # set the error message
-        print(e)       # print the error message
-
-
-class color:       # this class will print the text in different colors 
-    def prRed(skk): print("\033[91m {}\033[00m" .format(skk))  # this function will print the text in red color
-    def prGreen(skk): print("\033[92m {}\033[00m" .format(skk)) # this function will print the text in green color
-    def prYellow(skk): print("\033[93m {}\033[00m" .format(skk))    # this function will print the text in yellow color
-    def prLightPurple(skk): print("\033[94m {}\033[00m" .format(skk))  # this function will print the text in light purple color
-    def prPurple(skk): print("\033[95m {}\033[00m" .format(skk))   # this function will print the text in purple color
-    def prCyan(skk): print("\033[96m {}\033[00m" .format(skk))   # this function will print the text in cyan color
-    def prLightGray(skk): print("\033[97m {}\033[00m" .format(skk))      # this function will print the text in light gray color
-    def pr(skk): print('{}'.format(skk))
-
-green="\033[1;32m"  # this variable will print the text in green color
-red = "\033[1;31m"    # this variable will print the text in red color
-yellow = "\033[1;33m"   # this variable will print the text in yellow color
-purple = "\033[1;35m"  # this variable will print the text in purple color 
-cyan = "\033[1;36m" # this variable will print the text in cyan color
-blue = "\033[1;34m" # this variable will print the text in blue color
-reset = "\033[0m"  # this variable will reset the color to default color
-                                          
-
 
 
 def logo():     # this function will print the logo of the tool
