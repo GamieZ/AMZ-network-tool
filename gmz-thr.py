@@ -1,7 +1,7 @@
 import threading
 from netmiko import ConnectHandler , NetmikoTimeoutException, NetmikoAuthenticationException ,NetmikoBaseException
 from datetime import datetime
-import  time , os , sys , pathlib , logging , ipaddress  , json , threading , requests ,schedule
+import  time , os , sys , pathlib  , ipaddress  , json , threading , requests ,schedule
 from napalm import get_network_driver 
 from napalm.base.exceptions import ConnectionException  , ConnectAuthError
 import pandas as pd 
@@ -467,7 +467,7 @@ def bgp():
     connection.send_command_timing('conf t') #enter config terminal
     connection.send_command_timing('router bgp 1 ') #enter bgp
     connection.send_command_timing(f'neighbor {neighbor} remote-as {neighbor_as}')
-    connection.send_command_timing(f'no auto-summary')
+    connection.send_command_timing('no auto-summary')
     for vlan in range(int(st),int(end),int(i)):
         connection._send_command_timing_str(f'net 192.168.{vlan}.0 mask 255.255.255.0')
         print("done")
@@ -960,47 +960,6 @@ def trubleshooting_facts():
     for t in threads:
         t.join()
 
-
-    x = 0
-    while x < 3:
-        try:
-            user = input('Enter 1 for file IPs or 2 for user input IPs: ')
-            if user == '1':
-                hosts_list = input_file_ip_napalm()
-                if hosts_list == None:
-                    return None
-            elif user == '2':
-                hosts_list = input_user_ip_napalm()
-                if hosts_list == None:
-                    return None
-            else:
-                print('Error: Invalid input')
-                print('please Try again')
-                print  # print a blank line to
-                continue
-            break
-
-        except Exception as e:
-            print('Error(', str(e) + ')')
-            x += 1
-            print(f'You have {3 - x} attempts left')
-            if x == 3:
-                print('You have exceeded the number of attempts')
-                return None
-
-    if hosts_list == None:
-        print('No hosts to configure')
-        return None
-    
-    threads = []
-    for host in hosts_list:
-        t = threading.Thread(target=get_facts, args=(host,))
-        threads.append(t)
-        t.start()
-
-    for t in threads:
-        t.join()
-
 ################################################################
 # get vlan
 ################################################################
@@ -1272,6 +1231,88 @@ def trubleshooting_bgp_details():
     for t in threads:
         t.join()
 
+
+##########################################################################################
+""" any show command """
+##########################################################################################
+def send_show(host, show):
+    print('-'*50)
+    color.prLightPurple(f'**** Show device {host["ip"]} ****')
+    try:
+        connection = ConnectHandler(**host)
+        color.prGreen(f'Connected to {host["ip"]}')
+        prompt = connection.find_prompt()
+        print(prompt)
+        if '>' in prompt:
+            connection.enable()
+        output = connection.send_command_timing(show)
+        print(output)
+        print('-'*50)
+        connection.disconnect()
+        return output
+    except Exception as e:
+        print('Error(', str(e) + ')  \nTry again')
+
+
+def show_command():
+    color.prYellow('**** Show any command multiple devices ****')
+    color.prRed('ATTENTION: !!!')
+    color.prYellow('you have 3 attempts only ')
+    x = 0
+    while x < 3:
+        try:
+            user = input('Enter 1 for file IPs or 2 for user input IPs: ')
+            if user == '1':
+                hosts_list = input_file_ip()
+                if hosts_list == None:
+                    return None
+            elif user == '2':
+                hosts_list = input_user_ip()
+                if hosts_list == None:
+                    return None
+            else:
+                x += 1
+                color.prRed('Error: Invalid input')
+                color.prRed(f'You have {3 - x} attempts left')
+                if x == 3:
+                    color.prRed('You have exceeded the number of attempts')
+                    return None
+                
+                continue
+            break
+
+        except Exception as e:
+            # fix this error print to red
+            print('Error(', str(e) + ')')
+            x += 1
+            color.prRed(f'You have {3 - x} attempts left')
+            if x == 3:
+                color.prRed('You have exceeded the number of attempts')
+                return None
+            
+    if hosts_list == None:
+        color.prRed('Failed to load hosts')
+        color.prRed('No hosts to configure')
+        return None
+    
+    show = color.prYellow(input('Enter the show command: '))
+    show = str(show)
+    threads = []
+    results = []
+    color.prYellow('Please wait... starting multi threads')
+    for host in hosts_list:
+        t = threading.Thread(target=send_show, args=(host, show))
+        threads.append(t)
+        t.start()
+    
+    for t in threads:
+        t.join()
+        results.append(t.output)
+    
+    with open('show_command.txt', 'w') as f:
+        for output in results:
+            f.write(output)
+            f.write('*'*50)
 
 ################################################################
 """ monitoring + backup """
@@ -1562,11 +1603,14 @@ main_dict = {
     "2" : lambda:None,
     "3" : monitor_interfaces_th,
     "4" : schedule_backup,
-    "5" : lambda: sys.exit()
+    "5" : lambda:None,
     }   
 conf_option = '''
             [?] What do you want to perform?
             \033[1;31m--------------------------------\033[0m
+            [!] Exiting ==> \033[1;31mCTRL + C\033[0m
+            \033[1;31m[0]\033[0m \033[1;33mBack to main menu\033[0m
+            ------------------------------
             [1] Multi device same config
             [2] Multi device unique config
             [3] BGP
@@ -1574,12 +1618,13 @@ conf_option = '''
             [5] Create VLAN
             [6] Interface VLAN
             [7] DHCP
-            [8] \033[1;33mBack to main menu\033[0m
+            
             \033[1;31m--------------------------------\033[0m
             '''
 
 # options menu commands and functions 
 conf_dic = {
+    "0" : lambda : None,
 	"1" : multi_device_same_config,
 	"2" : multi_device_unique_config,
     "3" : bgp,
@@ -1587,25 +1632,27 @@ conf_dic = {
     "5" : vlan_create,
     "6" : int_vlan,
     "7" : dhcp ,
-    "8" : lambda : None,
 }
 
 trubleshooting_option = '''
             [?] What do you want to perform?
             \033[1;31m--------------------------------\033[0m
-            [1] Get Arp table
-            [2] Get Mac address table
-            [3] Get interface status
-            [4] Get interface counters
+            [!] Exiting ==> \033[1;31mCTRL + C\033[0m
+            \033[1;31m[0]\033[0m \033[1;33mBack to main menu\033[0m
+            ------------------------------
+            [1] Get Arp table                           [9] show command                     
+            [2] Get Mac address table                   [10] ping
+            [3] Get interface status                    [11] traceroute
+            [4] Get interface counters                  
             [5] Get interface ip address
             [6] Get vlans
             [7] Get bgp neighbors
             [8] Get Facts
-            [9] \033[1;33mBack to main menu\033[0m
             \033[1;31m--------------------------------\033[0m
             '''
 
 trubleshooting_dic = {
+    "0" : lambda : None,
     "1" : trubleshooting_arp,
     "2" : trubleshooting_get_mac,
     "3" : trubleshooting_interfacses,
@@ -1614,7 +1661,8 @@ trubleshooting_dic = {
     "6" : trubleshooting_vlan,
     "7" : trubleshooting_bgp_details,
     "8" : trubleshooting_facts,
-    "9" : lambda : None,
+    "9" : show_command,
+
 }
 
 
@@ -1636,7 +1684,7 @@ def main():
                     color.pr(logo())    # print the logo of the tool
                     try:
                         conf_choice = input("\n%s" % conf_option + blue + '[+] You choose: ' + reset)
-                        if conf_choice == '8':  # exit submenu and go back to main menu
+                        if conf_choice == '0':  # exit submenu and go back to main menu
                             break
                         conf_dic.get(conf_choice)()  # call function based on sub_choice
                     except KeyboardInterrupt:
@@ -1655,7 +1703,7 @@ def main():
                     color.pr(logo())  # print the logo of the tool
                     try:
                         trub_choice = input("\n%s" % trubleshooting_option + blue + '[+] You choose: ' + reset)
-                        if trub_choice == '9':  # exit submenu and go back to main menu
+                        if trub_choice == '0':  # exit submenu and go back to main menu
                             break
                         trubleshooting_dic.get(trub_choice)()  # call function based on sub_choice
                     except KeyboardInterrupt:
@@ -1668,6 +1716,10 @@ def main():
                         print('[!]' + red + 'Invalid Choice' + reset)
                         input(red + '[!] Press Enter to start over' + reset)
                         continue
+            elif choice == '5':  # if user selects submenu
+                print(red + '[!] Exiting' + reset)
+                time.sleep(1)
+                sys.exit(0)
             main_dict.get(choice)()          # call the function of the choice
         except KeyboardInterrupt:            # if the user press ctrl + c
             print (red+'[!] Ctrl + C detected\n[!] Exiting'+ reset)        # print a message
@@ -1695,8 +1747,6 @@ def welcome():
     time.sleep(.01)
 
 
-
-
-
+welcome()
 if __name__ == "__main__":          # if the program is running directly
     main()
