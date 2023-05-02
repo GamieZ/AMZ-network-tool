@@ -1,4 +1,3 @@
-import threading
 from netmiko import ConnectHandler , NetmikoTimeoutException, NetmikoAuthenticationException ,NetmikoBaseException
 from datetime import datetime
 import  time , os , sys , pathlib  , ipaddress  , json , threading , requests ,schedule
@@ -1432,7 +1431,7 @@ def monitor_interfaces(host):
         #    print(interfaces)
         #    print('---------------------------------')
             interfaces.pop(0)  # remove the first line of the output
-          #  print(interfaces)
+#  print(interfaces)
             for interface in interfaces:
             #    print(interface)
                 if not "unassigned" in interface :
@@ -1672,7 +1671,7 @@ def main():
         color.pr(logo())    # print the logo of the tool
 
         try:   # try to get the choice from the user
-            choice = input("\n%s" % main_options + blue+'[+] You choose: ' + reset)                 # get the choice from the user
+            choice = input("\n%s" % main_options + blue+'[+] Your choose: ' + reset)                 # get the choice from the user
             if choice not in main_dict:                       # if the user enter a wrong choice
                 print ('[!]'+ red+'Invalid Choice' + reset)             # print a message
                 input(yellow+'[!] Press Enter to start over'+reset)
@@ -1683,7 +1682,7 @@ def main():
                     os.system('cls' if os.name == 'nt' else 'clear')
                     color.pr(logo())    # print the logo of the tool
                     try:
-                        conf_choice = input("\n%s" % conf_option + blue + '[+] You choose: ' + reset)
+                        conf_choice = input("\n%s" % conf_option + blue + '[+] Your choose: ' + reset)
                         if conf_choice == '0':  # exit submenu and go back to main menu
                             break
                         conf_dic.get(conf_choice)()  # call function based on sub_choice
@@ -1702,7 +1701,7 @@ def main():
                     os.system('cls' if os.name == 'nt' else 'clear')
                     color.pr(logo())  # print the logo of the tool
                     try:
-                        trub_choice = input("\n%s" % trubleshooting_option + blue + '[+] You choose: ' + reset)
+                        trub_choice = input("\n%s" % trubleshooting_option + blue + '[+] Your choose: ' + reset)
                         if trub_choice == '0':  # exit submenu and go back to main menu
                             break
                         trubleshooting_dic.get(trub_choice)()  # call function based on sub_choice
@@ -1717,9 +1716,9 @@ def main():
                         input(red + '[!] Press Enter to start over' + reset)
                         continue
             elif choice == '5':  # if user selects submenu
-                print(red + '[!] Exiting' + reset)
-                time.sleep(1)
-                sys.exit(0)
+                print(red + '  [!] Exiting...' + reset)
+                time.sleep(.8)
+                os._exit(0)
             main_dict.get(choice)()          # call the function of the choice
         except KeyboardInterrupt:            # if the user press ctrl + c
             print (red+'[!] Ctrl + C detected\n[!] Exiting'+ reset)        # print a message
@@ -1736,7 +1735,7 @@ def main():
 def type_out(string):
     for char in string:
         print(char, end="", flush=True  )
-        time.sleep(0.007)
+        time.sleep(0.0035)
 def welcome():
     type_out(yellow+"      Welcome!        to our        AMZ TOOL\n" + reset)
     type_out("      --------------------------------------\n" )
