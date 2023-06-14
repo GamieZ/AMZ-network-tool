@@ -145,3 +145,68 @@ line vty 0 4
  transport input ssh
 !
 end
+configure terminal
+Enter configuration commands, one per line.  End with CNTL/Z.
+alex(config)#int range e0/0-1
+                           ^
+% Invalid input detected at '^' marker.
+
+alex(config)#sw trunk encapsulation dot1q
+              ^
+% Invalid input detected at '^' marker.
+
+alex(config)#sw mode trunk
+              ^
+% Invalid input detected at '^' marker.
+
+alex(config)#exit
+alex#configure terminal
+Enter configuration commands, one per line.  End with CNTL/Z.
+3swalex2(config)#int range e0/0-1
+3swalex2(config-if-range)#sw trunk encapsulation dot1q
+3swalex2(config-if-range)#sw mode trunk
+3swalex2(config-if-range)#exit
+3swalex2(config)#end
+3swalex2#configure terminal
+Enter configuration commands, one per line.  End with CNTL/Z.
+sw2alex(config)#int range e0/0-1
+sw2alex(config-if-range)#sw trunk encapsulation dot1q
+sw2alex(config-if-range)#sw mode trunk
+sw2alex(config-if-range)#exit
+sw2alex(config)#end
+sw2alex#configure terminal
+Enter configuration commands, one per line.  End with CNTL/Z.
+3swalex(config)#int range e0/0-1
+3swalex(config-if-range)#sw trunk encapsulation dot1q
+3swalex(config-if-range)#sw mode trunk
+3swalex(config-if-range)#exit
+3swalex(config)#end
+3swalex#configure terminal
+Enter configuration commands, one per line.  End with CNTL/Z.
+swalex(config)#int range e0/0-1
+swalex(config-if-range)#sw trunk encapsulation dot1q
+swalex(config-if-range)#sw mode trunk
+swalex(config-if-range)#exit
+swalex(config)#end
+swalex#configure terminal
+Enter configuration commands, one per line.  End with CNTL/Z.
+3swalex(config)#int range e0/0-1
+3swalex(config-if-range)#sw trunk encapsulation dot1q
+3swalex(config-if-range)#sw mode trunk
+3swalex(config-if-range)#exit
+3swalex(config)#end
+3swalex#configure terminal
+Enter configuration commands, one per line.  End with CNTL/Z.
+sw2alex(config)#int range e0/0-1
+sw2alex(config-if-range)#sw trunk encapsulation dot1q
+sw2alex(config-if-range)#sw mode trunk
+sw2alex(config-if-range)#exit
+sw2alex(config)#end
+sw2alex#configure terminal
+Enter configuration commands, one per line.  End with CNTL/Z.
+3swalex2(config)#int range e0/0-1
+3swalex2(config-if-range)#sw trunk encapsulation dot1q
+3swalex2(config-if-range)#sw mode trunk
+3swalex2(config-if-range)#exit
+3swalex2(config)#end
+3swalex2#

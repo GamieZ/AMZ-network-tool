@@ -287,14 +287,14 @@ def configure_device_same(host, configfile):
         output = connection.send_config_from_file(configfile)
         print(output)
         color.prGreen(f'Configuration file {configfile} loaded successfully on {host["ip"]}')
-        with open('output.txt', 'a') as f:
-            f.write(output)
+        with open('output.txt', 'a') as file:
+            file.write(output)
         
         connection.disconnect()
     except Exception as e:
         print('Error(', str(e) + ')  \nTry again')
 
-
+@netmiko_exception_handler
 def multi_device_same_config():
     color.prYellow('**** Configure multiple devices with same configuration file ****')
     color.prRed('ATTENTION: !!!')
@@ -379,12 +379,8 @@ def configure_device_unique(host):
     except Exception as e:
         print('Error(', str(e) + ')  \nTry again')
 
-
+@netmiko_exception_handler
 def multi_device_unique_config():
-    """
-    Prompt user for a list of device IPs, connect to each device,
-    and send a configuration file to each device
-    """
     x = 0
     while x < 3:
         try:
@@ -413,7 +409,8 @@ def multi_device_unique_config():
                 return None
             
     if hosts_list == None:
-        print('No hosts to configure')
+        color.prRed('Failed to load hosts')
+        color.prRed('No hosts to configure')
         return None
 
 
@@ -433,13 +430,11 @@ def multi_device_unique_config():
 "****************************************************************************************"
 ##########################################################################################
 # 1. Create a function that configures bgp on multiple devices
-# un complete + missing some parameters  -edit later
-'* fix it *' 
-''' multi mpgb threads'''
 ##########################################################################################
+@netmiko_exception_handler
 def bgp():
     
-    ip=validate_ip_address(input('enter router ip to connect :'))
+    ip=validate_ip_address(input('enter router ip to connect :')) # to coonect to device
 
     st=input('enter start vlan id :')
     end=input('enter end vlan id :')
@@ -469,13 +464,18 @@ def bgp():
     connection.send_command_timing('no auto-summary')
     for vlan in range(int(st),int(end),int(i)):
         connection._send_command_timing_str(f'net 192.168.{vlan}.0 mask 255.255.255.0')
-        print("done")
+
+    print("done")
 
     connection.disconnect()
 
+
+@netmiko_exception_handler
 def mp_bgp():
     
     ip=validate_ip_address(input('enter router IP to connect :'))
+    ip_vrf=validate_ip_address(input('enter IP VRF :'))
+    ip_vrf=str(ip_vrf)
     ebgp_neighbour = input('enter ebgp neighbour ip :')
     ibgp_neighbour = input('enter ibgp neighbours ip seprated by , :')
     ibgp_neighbours=ibgp_neighbour.split(',') 
@@ -492,6 +492,14 @@ def mp_bgp():
     
     connection.enable()        #enter enable mode
     connection.send_command_timing('conf t') #enter config terminal
+    connection.send_command_timing('ip vrf net')
+    connection.send_command_timing('rd 1:300')
+    connection.send_command_timing('route-target export 1:300')
+    connection.send_command_timing('route-target import 1:300')
+    connection.send_command_timing('interface Serial1/0')
+    connection.send_command_timing('ip vrf forwarding net')
+    connection.send_command_timing(f'ip address {ip_vrf} 255.255.255.0')
+    
     connection.send_command_timing(f'router bgp 300 ')
     for ibgp in ibgp_neighbours:
         print(ibgp)
@@ -515,8 +523,6 @@ def mp_bgp():
 "***************************************************************************************"
 ##########################################################################################
 # 1. Create a function that configures vlan on multiple devices  and eable dhcp pool
-#######******** un complete * add multi threading * Error handling *********##############
-'* fix it *'
 ##########################################################################################
 
 def create_vlan(host,st,end,i):
@@ -589,7 +595,7 @@ def vlan_create():
 
 
 #def int_vlan(ip):  
-
+@netmiko_exception_handler
 def int_vlan():
     color.prYellow('********** configure interface vlan **********')
     ip=validate_ip_address(input('enter ip address :'))
@@ -620,22 +626,24 @@ def int_vlan():
             vlan=str(vlan)
             if ask=='active' or ask=='Active'or ask=='A' or ask=='a': 
                 
-                connection.send_command_timing(f'sppaning tree vlan {vlan} root primary')
+                connection.send_command_timing(f'spanning-tree vlan {vlan} root primary')
                 connection.send_command_timing(f'interface vlan {vlan}')
-                connection.send_command_timing(f'ip address 192.168.{vlan}.1')
+
+                connection.send_command_timing(f'ip address 192.168.{vlan}.1 255.255.255.0')
                 connection.send_command_timing(f'ip helper-address {getway}')
-                connection.send_command_timing(f'standby {vlan} priorty 150')
+                connection.send_command_timing(f'standby {vlan} priority 150')
+                connection.send_command_timing(f'standby {vlan} preempt')
                 connection.send_command_timing(f'standby {vlan} ip 192.168.{vlan}.3')
                 connection.send_command_timing('no shut')
+                connection.send_command_timing("exit")
                 print(vlan + ' is done')
                 
             elif ask=='standby' or ask=='Standby'or ask=='S' or ask=='s':
                 
-                connection.send_command_timing(f'sppaning tree vlan {vlan} root secondary')
+                connection.send_command_timing(f'spanning-tree vlan {vlan} root secondary')
                 connection.send_command_timing(f'interface vlan {vlan}')
-                connection.send_command_timing(f'ip address 192.168.{vlan}.2')
+                connection.send_command_timing(f'ip address 192.168.{vlan}.2 255.255.255.0' )
                 connection.send_command_timing(f'ip helper-address {getway}')
-                connection.send_command_timing(f'standby {vlan} priorty 100')
                 connection.send_command_timing(f'standby {vlan} ip 192.168.{vlan}.3')
                 connection.send_command_timing('no shut')
 
@@ -647,7 +655,7 @@ def int_vlan():
 
 
 #define function for dhcp  pool 
-
+@netmiko_exception_handler
 def dhcp():
     color.prYellow('''********** DHCP **********''')
     ip=validate_ip_address(input('enter router IP to connect :'))
@@ -682,7 +690,6 @@ def dhcp():
     
     connection.disconnect()
 
-##########################################################################################
 ##########################################################################################
 ##########################################################################################
 """ NAPALM """
@@ -769,13 +776,12 @@ def get_interfases(host):
         with open(f"get_interface {host}.txt", 'w') as f:
             f.write(output)
         with open(f"get_interface {host}.txt") as f:
-            data = json.load(f)
-        df = pd.DataFrame.from_dict(pd.json_normalize(data), orient='columns')
-        print(df)
+            data=pd.read_json(f)
+            print(data)
         with open(f"get_interface{host}.txt", 'w') as fi:
             fi.seek(0)
             fi.truncate()
-            fi.write(df.to_string())
+            fi.write(data.to_string())
         device.close()
     except Exception as e:
         print('Error(', str(e) + ')  \nTry again')
@@ -835,16 +841,15 @@ def get_mac_address_table(host):
         device.open()
         mac_add = device.get_mac_address_table()
         output = json.dumps(mac_add, sort_keys=True, indent=4)
-        with open(f"get_mac_address_table {host}.txt", 'w') as f:
+        with open(f'get mac {host}.txt', 'w') as f:
             f.write(output)
-        with open(f"get_mac_address_table {host}.txt") as f:
-            data = json.load(f)
-        df = pd.DataFrame.from_dict(pd.json_normalize(data), orient='columns')
-        print(df)
-        with open(f"get_mac_address_table {host}.txt", 'w') as fi:
+        with open(f"get mac {host}.txt") as f:
+            data=pd.read_json(f)
+            print(data)
+        with open(f"get mac {host}.txt", 'w') as fi:
             fi.seek(0)
             fi.truncate()
-            fi.write(df.to_string())
+            fi.write(data.to_string())
         device.close()
     except Exception as e:
         print('Error(', str(e) + ')  \nTry again')
@@ -902,17 +907,15 @@ def get_facts(host):
         device.open()
         output = device.get_facts()
         output = json.dumps(output, sort_keys=True, indent=4)
-        with open(f"get_facts {host}.txt", 'w') as f:
+        with open(f"get_facts{host}.txt", 'w') as f:
             f.write(output)
-        with open(f"get_facts {host}.txt") as f:
-            data = json.load(f)
-        df = pd.DataFrame.from_dict(pd.json_normalize(data), orient='columns')
-        print(df)
-        with open(f"get_facts {host}.txt", 'w') as fi:
+        with open(f"get_facts{host}.txt") as f:
+            data = pd.read_json(f)
+            print(data)
+        with open(f"get_facts{host}.txt", 'w') as fi:
             fi.seek(0)
             fi.truncate()
-            fi.write(df.to_string())
-
+            fi.write(data.to_string())
         device.close()
     except Exception as e:
         print('Error(', str(e) + ')  \nTry again')
@@ -970,16 +973,16 @@ def vlan(host):
         device.open()
         output =device.get_vlans()
         output = json.dumps(output, sort_keys=True, indent=4)
-        with open(f"vlan{host} .txt", 'w') as f:
+
+        with open(f"get_vlan {host}.txt", 'w') as f:
             f.write(output)
-        with open(f"vlan{host} .txt") as f:
-            data = json.load(f)
-        df = pd.DataFrame.from_dict(pd.json_normalize(data), orient='columns')
-        print(df)
-        with open(f"vlan{host} .txt", 'w') as fi:
+        with open(f"get_vlan {host}.txt") as f:
+            data = pd.read_json(f,orient='index')
+            print(data)
+        with open(f"get_vlan {host}.txt", 'w') as fi:
             fi.seek(0)
             fi.truncate()
-            fi.write(df.to_string())
+            fi.write(data.to_string())
 
         device.close()
     except Exception as e:
@@ -1039,17 +1042,15 @@ def get_interfaces_counters(host):
         device.open()
         output=device.get_interfaces_counters()
         output=json.dumps(output,sort_keys=True,indent=4)
-        with open(f"get_interfaces_counters {host}.txt", 'w') as f:
+        with open(f"get_interfaces_counters{host}.txt", 'w') as f:
             f.write(output)
-        with open(f"get_interfaces_counters {host}.txt") as f:
-            data = json.load(f)
-        df = pd.DataFrame.from_dict(pd.json_normalize(data), orient='columns')
-        print(df)
-        with open(f"get_interfaces_counters {host}.txt", 'w') as fi:
+        with open(f"get_interfaces_counters{host}.txt") as f:
+            data = pd.read_json(f)
+            print(data)
+        with open(f"get_interfaces_counters{host}.txt", 'w') as fi:
             fi.seek(0)
             fi.truncate()
-            fi.write(df.to_string())
-
+            fi.write(data.to_string())
         device.close()
     except Exception as e:
         print('Error(', str(e) + ')  \nTry again')
@@ -1107,17 +1108,15 @@ def get_interfaces_ip(host):
         device.open()
         output=device.get_interfaces_ip()
         output = json.dumps(output, sort_keys=True, indent=4)
-        with open(f"get_interfaces_ip {host}.txt", 'w') as f:
+        with open(f"get_interface_ip{host}.txt", 'w') as f:
             f.write(output)
-        with open(f"get_interfaces_ip {host}.txt") as f:
-            data = json.load(f)
-        df = pd.DataFrame.from_dict(pd.json_normalize(data), orient='columns')
-        print(df)
-        with open(f"get_interfaces_ip {host}.txt", 'w') as fi:
+        with open(f"get_interface_ip{host}.txt") as f:
+            data = pd.read_json(f)
+            print(data)
+        with open(f"get_interface_ip{host}.txt", 'w') as fi:
             fi.seek(0)
             fi.truncate()
-            fi.write(df.to_string())
-
+            fi.write(data.to_string())
         device.close()
     except Exception as e:
         print('Error(', str(e) + ')  \nTry again')
@@ -1173,13 +1172,15 @@ def get_bgp_details(host):
         device.open()
         output=device.get_bgp_neighbors_detail()
         output = json.dumps(output, sort_keys=True, indent=4)
-        with open(f"get_bgp_details {host}.txt", 'w') as f:
-            f.write(output)
-        with open(f"get_bgp_details {host}.txt") as f:
+        with open(f"getbgp {host}.txt", 'w') as fi:
+            fi.write(output)
+        with open(f"getbgp {host}.txt" ,"r") as f:
             data = json.load(f)
-        df = pd.DataFrame.from_dict(pd.json_normalize(data), orient='columns')
+        df = pd.DataFrame(data["global"]["300"]).transpose()
+        df.columns = ["300"]
         print(df)
-        with open(f"get_bgp_details {host}.txt", 'w') as fi:
+
+        with open(f"getbgp {host}.txt", 'w') as fi:
             fi.seek(0)
             fi.truncate()
             fi.write(df.to_string())
@@ -1244,7 +1245,7 @@ def send_show(host, show):
         print(prompt)
         if '>' in prompt:
             connection.enable()
-        output = connection.send_command_timing(show)
+        output = connection._send_command_timing_str(show)
         print(output)
         print('-'*50)
         connection.disconnect()
@@ -1252,7 +1253,7 @@ def send_show(host, show):
     except Exception as e:
         print('Error(', str(e) + ')  \nTry again')
 
-
+@netmiko_exception_handler
 def show_command():
     color.prYellow('**** Show any command multiple devices ****')
     color.prRed('ATTENTION: !!!')
@@ -1306,7 +1307,7 @@ def show_command():
     
     for t in threads:
         t.join()
-        results.append(t.output)
+        results.append(t.output) # if error remove this line
     
     with open('show_command.txt', 'w') as f:
         for output in results:
@@ -1414,8 +1415,6 @@ def schedule_backup():
 # 1 . Create a function that will monitor if any of the interfaces on a device goes down
 #     and if it does, try to bring it back up again using the "no shut" command
 #     and if it doesn't work, send an alart to the network team
-##########*********           un completed yet      ************* #############
-'* fix it *'
 
 ##########################################################################################
 
@@ -1428,12 +1427,8 @@ def monitor_interfaces(host):
             print(output) 
             print('*********************************')
             interfaces = output.splitlines()  # split the output into a list of interfaces
-        #    print(interfaces)
-        #    print('---------------------------------')
             interfaces.pop(0)  # remove the first line of the output
-#  print(interfaces)
             for interface in interfaces:
-            #    print(interface)
                 if not "unassigned" in interface :
 
                     if 'down' in interface:
@@ -1444,19 +1439,6 @@ def monitor_interfaces(host):
                         down_strip = down_interface.strip()   
                         print(down_strip)
                         print('---------------------------------')
- #                      if "FastEthernet" in down_strip:
-  #                     out = "f " + down_strip[12:]
-   #                    print(out)
-    #                   elif "GigabitEthernet" in down_strip:
-     #                   out = "g " + down_strip[15:]
-      #                 elif "Ethernet" in down_strip:
-       #                 out = "e " + down_strip[8:]
-        #               elif "Loopback" in down_strip:
-         #               out = "loopback" + down_strip[8:]
-          #             elif "Serial" in down_strip:
-           #             out = "s " + down_strip[6:]
-
-                        print(connection.find_prompt())
                         connection.enable()        
                         connection.send_command_timing('conf t ') #
                         connection.send_command_timing(f'int {down_strip} ')
@@ -1464,15 +1446,12 @@ def monitor_interfaces(host):
                         connection.send_command_timing('end ')
                         print(f'Interface {down_interface} is up')
                         send_to_telegram(f'Interface {down_interface} is up')
-                # send an alert email, text message, or any other action
             time.sleep(10)       #error in this line
         except:
             print("Error in monitoring interfaces")
             break 
 
 
-                    #     if in_errors > 100:          # test for input errors on the interface
-                    #       print(f"Interface {intf} on {device['hostname']} has {in_errors} input errors.")
 
 ##########################
 @netmiko_exception_handler
@@ -1531,17 +1510,10 @@ def monitor_interfaces_th():
             t.join()
 
 
-                    #     if in_errors > 100:          # test for input errors on the interface
-                    #       print(f"Interface {intf} on {device['hostname']} has {in_errors} input errors.")
-
-#----------------------------
-
-
 
 ###########################################################################################
 # Main program  cli interface
 ###########################################################################################
-
 
 def logo():     # this function will print the logo of the tool
     hti = cyan+'''  
@@ -1551,11 +1523,9 @@ def logo():     # this function will print the logo of the tool
 |  __  |  | |    | |  
 | |  | |  | |   _| |_ 
 |_|  |_|  |_|  |_____|
-Electrical  Engineering 
-          &
- Computers  Department
-  Graduation Project
-''' + reset+green+'''
+Electrical  Engineering
+      Department'''+ reset+red+'''
+  Graduation Project'''+ reset+green+'''
          A-M-Z 
 Network Management Tool '''+reset + '\n' # this is the logo of the tool
    
@@ -1567,7 +1537,7 @@ Network Management Tool '''+reset + '\n' # this is the logo of the tool
     # Add the spaces to the beginning of each line of the logo string
     centered_HTI = "\n".join([" " * num_spaces + line for line in hti.split("\n")])     # this will center the logo
 
-    centered_logo = centered_HTI+ '\n' +red+'\n''[+]'+blue+ ''' Coded By:'''+ yellow+"    Ahmed - Mariam - Alzhraa"+red+'\n' + red + '[+]'+blue+''' supervised by :'''+ yellow+'''    Dr. ESLAM SAMY EL-MOKADEM '''+red+'\n'+red+'[+]'+blue+''' Version:'''+yellow+'''    1.0'''+red+'\n'+red+'[+]'+blue+''' Description:'''+yellow+'''    AUTOMATED NETWORK CONFIGURATION MANAGEMENT , MONITORING AND BACKUP TOOL'''+reset+'\n'
+    centered_logo = centered_HTI+ '\n' +red+'\n''[+]'+blue+ ''' Coded By :'''+ yellow+"    Ahmed - Mariam - Alzhraa"+red+'\n' + red + '[+]'+blue+''' supervised by :'''+ yellow+'''    Dr. ESLAM SAMY EL-MOKADEM '''+red+'\n'+red+'[+]'+blue+''' Version :'''+yellow+'''    1.0'''+red+'\n'+red+'[+]'+blue+''' Description :'''+yellow+'''    AUTOMATED NETWORK CONFIGURATION MANAGEMENT , MONITORING AND BACKUP TOOL'''+reset+'\n'
     return centered_logo # return the logo to the main program
 
 ###########################################################################################
@@ -1585,6 +1555,8 @@ def menu():
         else:
             print('[!]'+red+'Please enter a valid choice'+reset)
             continue
+
+
 
 # options menu 
 main_options = '''
@@ -1607,7 +1579,7 @@ main_dict = {
 conf_option = '''
             [?] What do you want to perform?
             \033[1;31m--------------------------------\033[0m
-            [!] Exiting ==> \033[1;31mCTRL + C\033[0m
+            [!] Exiting => \033[1;31mCTRL + C\033[0m
             \033[1;31m[0]\033[0m \033[1;33mBack to main menu\033[0m
             ------------------------------
             [1] Multi device same config
@@ -1617,7 +1589,6 @@ conf_option = '''
             [5] Create VLAN
             [6] Interface VLAN
             [7] DHCP
-            
             \033[1;31m--------------------------------\033[0m
             '''
 
@@ -1636,17 +1607,18 @@ conf_dic = {
 trubleshooting_option = '''
             [?] What do you want to perform?
             \033[1;31m--------------------------------\033[0m
-            [!] Exiting ==> \033[1;31mCTRL + C\033[0m
+            [!] Exiting => \033[1;31mCTRL + C\033[0m
             \033[1;31m[0]\033[0m \033[1;33mBack to main menu\033[0m
             ------------------------------
-            [1] Get Arp table                           [9] show command                     
-            [2] Get Mac address table                   [10] ping
-            [3] Get interface status                    [11] traceroute
+            [1] Get Arp table                                                
+            [2] Get Mac address table           
+            [3] Get interface status                    
             [4] Get interface counters                  
             [5] Get interface ip address
             [6] Get vlans
             [7] Get bgp neighbors
             [8] Get Facts
+            [9] Show command
             \033[1;31m--------------------------------\033[0m
             '''
 
@@ -1687,8 +1659,8 @@ def main():
                             break
                         conf_dic.get(conf_choice)()  # call function based on sub_choice
                     except KeyboardInterrupt:
-                        print(red + '[!] Ctrl + C detected\n[!] Exiting' + reset)
-                        sys.exit(0)
+                        print (red+'[!] Ctrl + C detected\n[!] Exiting'+ reset)        # print a message
+                        time.sleep(.5)
                     except EOFError:
                         print(red + '[!] Ctrl + D detected\n[!] Exiting' + reset)
                         sys.exit(0)
@@ -1706,8 +1678,8 @@ def main():
                             break
                         trubleshooting_dic.get(trub_choice)()  # call function based on sub_choice
                     except KeyboardInterrupt:
-                        print(red + '[!] Ctrl + C detected\n[!] Exiting' + reset)
-                        sys.exit(0)
+                        print (red+'[!] Ctrl + C detected\n[!] Exiting'+ reset)        # print a message
+                        time.sleep(.5)
                     except EOFError:
                         print(red + '[!] Ctrl + D detected\n[!] Exiting' + reset)
                         sys.exit(0)
@@ -1722,7 +1694,7 @@ def main():
             main_dict.get(choice)()          # call the function of the choice
         except KeyboardInterrupt:            # if the user press ctrl + c
             print (red+'[!] Ctrl + C detected\n[!] Exiting'+ reset)        # print a message
-            sys.exit(0)             # exit the program
+            time.sleep(.5)
         except EOFError:            # if the user press ctrl + d
             print (red+'[!] Ctrl + D detected\n[!] Exiting' +reset )            # print a message
             sys.exit(0)
